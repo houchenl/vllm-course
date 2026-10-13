@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-13",
+  "tool": "image_gen.imagegen (built-in)",
+  "lesson": "01-inference-lifecycle",
+  "purpose": "教学示意图；不是硬件实测、物理比例或实际默认配置",
+  "presentation_validation": {
+    "html_embedding": "PNG data URI; bytes match original assets",
+    "desktop_and_mobile": "Both embedded images decoded; zoom dialog, actual size, fit and close passed",
+    "mobile_viewport_width": 390,
+    "horizontal_page_overflow": false,
+    "print_pdf_generated": true,
+    "browser_script_exceptions": 0,
+    "hardware_measurements": "not performed"
+  },
+  "figures": [
+    {
+      "id": "figure-kv-reuse",
+      "number": "1.2",
+      "file": "assets/figures/lesson01-kv-reuse-v1.png",
+      "caption": "Prefill 写入 KV，Decode 读取历史并追加新位置",
+      "prompt": "Use case: scientific-educational\nAsset type: original technical textbook illustration embedded in a Chinese vLLM course, first chapter, section explaining KV cache reuse.\nPrimary request: draw an accurate two-panel teaching diagram comparing PREFILL with one subsequent DECODE step in a standard decoder-only full causal attention model. Clear polished engineering textbook artwork, landscape composition, large readable labels, restrained flat illustrations of tensors and a model block, ample white space, no decorative hero graphics.\nPalette: warm ivory background #fbfaf6, dark navy #203b55 outlines/text, muted teal #176759 for computed cache, ochre for newly sampled outputs. Use serif panel titles and clean sans serif labels. No gradients, no photorealism, no logos.\nExact conceptual content:\nLEFT panel headed \"PREFILL\". Four input tokens labelled \"x1\", \"x2\", \"x3\", \"x4\" enter a single block labelled \"Model\". Model writes a history cache represented by exactly FOUR teal token-position cards labelled \"x1\", \"x2\", \"x3\", \"x4\", each indicating \"K / V\". Model also produces one output token labelled \"y1\", shown in a separate ochre dashed-outline card OUTSIDE the cache. Simple correctly oriented arrows from inputs into model, from model toward cache and toward output. Cache caption \"4 computed positions\". Output caption \"sampled, not cached yet\".\nRIGHT panel headed \"DECODE\". Exactly ONE input token \"y1\" enters another identical \"Model\" block. The model reads an existing history cache of exactly FOUR teal cards \"x1\", \"x2\", \"x3\", \"x4\", with an arrow oriented FROM history cache TO model and labelled \"read history\". Show appending one newly computed teal cache card \"y1\" to that history, producing exactly FIVE cached positions. Output of the model is \"y2\", an ochre dashed-outline card separate from every cache. Captions \"append K / V of y1\", \"5 computed positions\", \"y2: sampled, not cached yet\". The right layout can show a before cache (four cards) and an after cache (five cards) separately, clearly labelled \"Before\" and \"After\".\nConstraints: y1 is NOT in the LEFT cache. y2 is NEVER in the RIGHT cache. Sampling an output does not mean its K/V has been computed. The illustrations concern token-position cache accounting across the model, not claims that the model has only one layer. Do not show a direct y2-to-cache arrow. Show only the specified token labels and English technical labels. Keep text legible and count every card accurately. This is schematic teaching data, no performance chart.",
+      "review": {
+        "status": "visually-reviewed",
+        "checks": [
+          "左图输入 x1…x4；KV 恰好 4 个位置，不含 y1",
+          "右图读取 4 个历史位置；追加 y1 后恰好 5 个缓存位置",
+          "左输出 y1、右输出 y2 均在各自新缓存外",
+          "历史读取箭头指向模型；采样输出不直接写入 KV"
+        ],
+        "scope": "标准 decoder-only 全因果 Attention；无前缀命中、无投机；聚合 token 位置的示意"
+      }
+    },
+    {
+      "id": "figure-kv-pool",
+      "number": "1.4",
+      "file": "assets/figures/lesson01-kv-pool-v1.png",
+      "caption": "逻辑历史、分配块与预分配池的三个计数",
+      "prompt": "Use case: scientific-educational\nAsset type: original engineering textbook illustration for a vLLM chapter on memory accounting.\nPrimary request: explain THREE distinct quantities with an accurate stacked illustration: logical KV history, allocated cache blocks, and a preallocated KV pool. Minimal scientific illustration with neatly drawn memory tiles and brackets, landscape layout, wide spacing, large readable English labels. Consistent warm ivory #fbfaf6 paper, dark navy #203b55 type/outline, teal #176759 for occupied token slots, ochre hatching for assigned but empty slots, pale grey for unassigned slots. Flat textbook illustration, no hardware vendor logos, no 3D photo, no decorative ornaments.\nUse a small schematic example with one request, five computed positions, a block size of four positions, and a preallocated pool of three blocks. Draw three aligned horizontal rows:\nROW 1 heading \"Logical KV\". Show exactly FIVE teal tiles labelled \"t1\", \"t2\", \"t3\", \"t4\", \"t5\", with a bracket/caption \"5 computed positions\". Only those five tiles are needed in this row.\nROW 2 heading \"Allocated blocks\". Show exactly TWO outlined blocks, each subdivided into FOUR slots. First block: teal t1,t2,t3,t4. Second block: teal t5, followed by exactly THREE ochre HATCHED empty slots. A bracket encompasses both blocks and reads \"8 allocated slots\". Label the hatched region \"3 empty slots\".\nROW 3 heading \"Preallocated pool\". Show exactly THREE outlined blocks, each subdivided into FOUR slots, twelve slots TOTAL. First two blocks repeat the same five teal occupied slots and three hatched assigned-but-empty slots. Third block contains exactly FOUR pale grey free slots. The caption is \"12 pool slots\"; third block labelled \"free block\".\nA small legend uses \"computed\", \"assigned but empty\", \"free\". A short footnote states \"Illustrative block size: 4\" and \"Request completion can free blocks without shrinking the pool.\"\nConstraints: three quantities must be 5, 8, 12 respectively. Every block has exactly 4 slots. Do not imply that 5, 8, 12 are measured GiB values, bytes, or actual vLLM default sizes. Do not draw a proportionate hardware device memory diagram or a GPU model. Empty slots must be visually distinct from free blocks. Precise counts and labels, no additional unexplained tensor dimensions.",
+      "review": {
+        "status": "visually-reviewed",
+        "checks": [
+          "逻辑历史为 5 个 token 位置",
+          "已分配 2 个块、每块 4 槽，恰好 8 槽",
+          "第 2 块含 1 个已计算位置与 3 个已分配空槽",
+          "池有 3 个块共 12 槽；第 3 块为 4 个空闲槽",
+          "教学块大小 4 明示，不声称为 vLLM 默认或设备字节占用"
+        ],
+        "scope": "无共享、无额外预留；每槽相同缓存载荷的教学模型"
+      }
+    }
+  ]
+}

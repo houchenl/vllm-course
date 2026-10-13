@@ -1,0 +1,306 @@
+<header class="chapter-head" id="top">
+  <p class="eyebrow">VLLM &amp; AI INFRA · 推理引擎主干 · 第 1 学习周</p>
+  <span class="chapter-number">01</span>
+  <h1>一次生成请求如何运行</h1>
+  <p class="lead">从 Prefill、Decode 和 KV cache，走到 vLLM V1 的调度闭环。</p>
+  <div class="meta">原理与诊断 75 分钟 · 源码 75 分钟 · 实验 120 分钟 · 复盘 30 分钟<br>阅读快照：2026-10-13 · 主平台：H20 / Ascend 910C · 本课状态：讲义已准备，硬件实验待完成</div>
+</header>
+
+<section id="orientation">
+<h2>1.0　问题、目标与学习路线</h2>
+<p>你接到一项适配任务：模型能启动，但首 token 很慢；输入变长后吞吐下降；迁移到 910C，性能排序又发生变化。应该先调哪个参数？仅凭“模型能运行”无法回答。你需要知道，一次请求究竟计算了什么、保存了什么状态、经过了哪些进程，以及测量的时间包含哪些工作。</p>
+<p>本章建立后续学习共用的分析模型：<strong>输入 token → 模型计算 → 历史状态 → 采样 → 下一次计算</strong>。随后把这个模型映射到 vLLM 的客户端、调度器和设备执行路径。你熟悉 Transformer，因此本章从推理中的状态和时间入手，Attention 的训练推导不作为前置复习任务。</p>
+<div class="box"><div class="label">学习目标 / LEARNING OBJECTIVES</div>
+<ol><li>解释第一个输出 token 为什么来自 Prefill，以及一个输出 token 何时拥有自己的 KV。</li><li>在明确假设下推导 KV 容量，检查单位，并区分逻辑状态、分页槽位和设备预分配池。</li><li>区分 TTFT、TPOT、ITL、端到端延迟和批次吞吐，判断一项测量能支持哪些结论。</li><li>定位五个源码方法，画出跨进程的数据流和引擎内的调度闭环。</li><li>在一个已验证的单卡环境建立四组基线，提出一个可检验的性能假设。</li></ol></div>
+<div class="table-scroll"><table><caption>表 1.1　本周时间安排。所有准备和排障均计入 5 小时。</caption><thead><tr><th>时间</th><th>学习活动</th><th>留下的证据</th></tr></thead><tbody>
+<tr><td>15 分钟</td><td>基础诊断</td><td>已有理解与不确定点</td></tr><tr><td>60 分钟</td><td>§1.1–1.6：模型、容量和指标</td><td>执行轨迹与两道容量手算</td></tr><tr><td>75 分钟</td><td>§1.7：限定范围的源码阅读</td><td>五个方法职责、输入输出与进程边界</td></tr><tr><td>120 分钟</td><td>§1.9：环境记录和最小实验</td><td>实际配置与四组原始结果</td></tr><tr><td>30 分钟</td><td>§1.10：自测与报告</td><td>解释、假设与下一步测量</td></tr>
+</tbody></table></div>
+<p class="small">基础诊断：不查资料，回答以下五题。① <code>[8,1024,4096]</code> 的 BF16 张量占多少字节，transpose 是否必然复制？② 主机调用设备 API 返回后，计算是否必然完成？③ TP=8 在具体层中切分什么、产生什么通信？④ 权重装得下能否证明目标并发可服务？⑤ batch 增大后总 token/s 上升能否证明用户更快？未知直接标注；参考要点放在章末。</p>
+</section>
+
+<section id="model">
+<h2>1.1　先建立一个可推演的模型</h2>
+<p>工程分析需要一个足够简单、又能保留关键因果关系的起点。本章先采用标准 decoder-only 自回归模型：所有相关层使用全因果 Attention；没有前缀缓存命中，没有投机解码，一次分析一个序列。第 1.8 节再说明你的两个工作模型如何超出这些假设。</p>
+<p>设输入序列为 <var>x</var><sub>1</sub>, …, <var>x</var><sub>P</sub>，模型处理这些输入位置，并从最后位置的 logits 中选择第一个输出 <var>y</var><sub>1</sub>。这次对输入前缀的处理称为 <strong>Prefill（预填充）</strong>。因果 mask 使每个位置只能看到允许的历史；矩阵运算仍可一起处理多个输入位置。</p>
+<p>为了生成 <var>y</var><sub>2</sub>，再把已经选择的 <var>y</var><sub>1</sub> 作为新输入送入模型。模型读取历史状态、计算新位置，然后选择下一个输出。后续逐步生成称为 <strong>Decode（解码）</strong>。这里“选择”既可以是 greedy，也可以是其他采样策略；本节只讨论两次模型计算之间的数据依赖。</p>
+<div class="box"><div class="label">关键区别 / THE KEY DISTINCTION</div>
+<p><strong>已知 token 的值，与已计算该 token 的 KV，是两件事情。</strong>采样产生的是一个 token ID。只有把这个 ID 再输入后续 forward，模型才计算它在相应层的 K/V。</p></div>
+<div class="table-scroll"><table><caption>表 1.2　标准完整 Prefill 与普通 Decode 的状态变化。</caption><thead><tr><th>计算</th><th>本次输入</th><th>计算后的逻辑 KV</th><th>新输出</th></tr></thead><tbody>
+<tr><td>Prefill</td><td>x₁ … x<sub>P</sub></td><td>x₁ … x<sub>P</sub></td><td>y₁</td></tr><tr><td>第一次 Decode</td><td>y₁</td><td>x₁ … x<sub>P</sub>, y₁</td><td>y₂</td></tr><tr><td>第二次 Decode</td><td>y₂</td><td>x₁ … x<sub>P</sub>, y₁, y₂</td><td>y₃</td></tr>
+</tbody></table></div>
+<p>因此，在上述流程中生成 <var>N</var> 个输出，需要一次完整 Prefill 加 <var>N</var>−1 次普通 Decode。刚得到最后一个输出时，已计算的历史通常有 <var>P</var>+<var>N</var>−1 个位置。这个计数描述模型计算依赖；Chunked Prefill 会把 Prefill 拆成多个执行批次，投机解码会改变一次迭代的输入输出量，lookahead 也可能提前分配槽位。<strong>模型步骤数不能直接代替实际调度次数或物理分配量。</strong></p>
+
+<figure class="interactive" id="token-demo">
+<h3>图 1.1　追踪三个计算步骤</h3>
+<p class="small">教学设定：P=4，N=3。实线框表示已经计算 KV 的 token；虚线框表示本轮刚选择、尚未输入下一次 forward 的 token。</p>
+<div class="controls"><button id="step-prev" type="button" disabled>上一步</button><button id="step-next" type="button">下一步</button><span id="step-counter" class="small">1 / 3</span></div>
+<div id="step-state" aria-live="polite" aria-atomic="true">
+<h4 id="step-title">步骤 1：Prefill</h4>
+<p id="step-input" class="state-caption">本次输入：x₁、x₂、x₃、x₄</p>
+<div class="state-grid"><div><h4>计算后已有的逻辑 KV</h4><div class="token-row" id="kv-tokens"><span class="token">x₁</span><span class="token">x₂</span><span class="token">x₃</span><span class="token">x₄</span></div></div><div><h4>本轮新采样的输出</h4><div class="token-row" id="sample-token"><span class="token output">y₁</span></div></div></div>
+<p class="state-caption" id="step-explanation">已计算 4 个位置，已知输入与输出共 5 个 token；下一次需要计算 y₁。</p></div>
+<figcaption>状态示意图，不是实测的时间线。关闭 JavaScript 时，表 1.2 仍给出完整轨迹。</figcaption>
+</figure>
+<details class="answer"><summary>概念检查 1.1：生成 32 个输出，是否需要 32 次普通 Decode？</summary><div class="answer-body"><p>按本节假设，需要 31 次普通 Decode。第一个输出已经由完整 Prefill 产生。若实际引擎把 Prefill 分块或采用投机解码，必须另行统计执行批次，不能套用这个次数。</p></div></details>
+</section>
+
+<section id="cache">
+<h2>1.2　KV cache 是计算与存储之间的交换</h2>
+<p>对一层标准 Attention，设 <var>X</var> 为本次需要计算的位置的输入表示。线性投影得到 query、key 和 value：</p>
+<div class="equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>Q</mi><mo>=</mo><mi>X</mi><msub><mi>W</mi><mi>Q</mi></msub><mo>,</mo><mspace width="1em"/><mi>K</mi><mo>=</mo><mi>X</mi><msub><mi>W</mi><mi>K</mi></msub><mo>,</mo><mspace width="1em"/><mi>V</mi><mo>=</mo><mi>X</mi><msub><mi>W</mi><mi>V</mi></msub></mrow></math><span class="eqno">(1.1)</span></div>
+<p>query 根据与 key 的相关性分配权重，再对 value 加权：</p>
+<div class="equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi mathvariant="normal">Attention</mi><mo>(</mo><mi>Q</mi><mo>,</mo><mi>K</mi><mo>,</mo><mi>V</mi><mo>)</mo><mo>=</mo><mi mathvariant="normal">softmax</mi><mo>(</mo><mfrac><mrow><mi>Q</mi><msup><mi>K</mi><mi mathvariant="normal">T</mi></msup></mrow><msqrt><msub><mi>d</mi><mi>h</mi></msub></msqrt></mfrac><mo>+</mo><mi>M</mi><mo>)</mo><mi>V</mi></mrow></math><span class="eqno">(1.2)</span></div>
+<p><var>d</var><sub>h</sub> 是每个 head 的维度，<var>M</var> 是因果 mask。Decode 的新 query 需要历史位置的 K/V；历史 K/V 在这些位置的输入和模型参数不变时可以复用。因此，缓存过去算出的 K/V，就无需每次生成都重新执行整个前缀的模型计算。</p>
+<p>在 Decode 中，式 (1.1) 可以只为新位置计算投影；式 (1.2) 的 K/V 则组合历史缓存与新位置。缓存减少重复计算，却带来需要分配、读取、共享和回收的持续状态。缓存管理于是成为引擎设计的核心，而非模型旁边的一项可有可无的优化。</p>
+<figure class="textbook-illustration" id="figure-kv-reuse">
+<button type="button" class="illustration-open" aria-label="放大图 1.2：Prefill 与 Decode 的 KV 复用"><img src="../assets/figures/lesson01-kv-reuse-v1.png" alt="标准模型的两步示意：Prefill 处理 x1 至 x4，将这四个位置的 KV 写入缓存并采样 y1；Decode 输入 y1、读取四个历史位置，追加 y1 的 KV 后有五个位置，再采样尚未缓存的 y2。" decoding="async"></button>
+<figcaption>图 1.2　<strong>Prefill 写入历史，Decode 读取并追加。</strong>图中的 Model 代表一次相关模型计算，缓存卡片按 token 位置聚合表示，不代表模型只有一层。标准全因果 Attention、无命中、无投机；单击插图可放大。</figcaption>
+<p class="figure-reading">读图顺序：左图先计算 x₁…x₄ 的 KV，再得到 y₁；右图把 y₁ 输入模型，读取已有历史，并追加 y₁ 的 KV。虚线输出框表示“已经采样，尚未作为下一次输入计算 KV”。<em>read history</em> 是读取历史，<em>append</em> 是追加；右图 Before / After 分别表示此次计算前后。</p>
+</figure>
+<div class="table-scroll"><table><caption>表 1.3　容量分析应区分的四类对象。</caption><thead><tr><th>对象</th><th>作用</th><th>生命周期</th></tr></thead><tbody>
+<tr><td>模型权重</td><td>定义线性层、Attention、专家等参数</td><td>模型驻留期间</td></tr><tr><td>请求 KV / 状态</td><td>复用历史推理状态</td><td>请求存活或缓存复用期间</td></tr><tr><td>激活与 workspace</td><td>本次计算的输入、中间结果和临时空间</td><td>一个或若干执行步骤</td></tr><tr><td>Graph 与运行时资源</td><td>执行捕获、通信、内存管理等</td><td>引擎运行期间</td></tr>
+</tbody></table></div>
+<p>KV cache 不等于权重，也不等于永久保存所有中间激活。一个模型还可能保存专用压缩表示或递推状态；到混合架构时，必须逐层确认“究竟缓存了什么”。<a href="https://arxiv.org/abs/2309.06180">PagedAttention 原论文</a>讨论动态 KV 的碎片和共享问题；第 7–8 周将把这些问题落实到块表、引用计数和源码。</p>
+</section>
+
+<section id="capacity">
+<h2>1.3　从一个元素推导 KV 容量</h2>
+<p>容量公式不应从记忆开始，而应从缓存中的元素开始。一个位置在一层有 <var>H</var><sub>kv</sub> 个 K heads 和同样多的 V heads；每个 head 有 <var>d</var><sub>h</sub> 个元素，每个元素占 <var>s</var> 字节。乘以所有相关层，再乘以保留的位置总数，就得到理想存储量。</p>
+<div class="box boundary"><div class="label">适用条件 / ASSUMPTIONS</div><p>以下公式假设：L 层均为标准全 Attention；每层 K/V 的 heads、维度和精度相同；没有跨请求共享，没有 TP/CP 分片，没有压缩或窗口淘汰。它估算缓存载荷，不包含元数据、对齐、预留槽或整池预分配。</p></div>
+<div class="table-scroll"><table><caption>表 1.4　符号与单位。</caption><thead><tr><th>符号</th><th>意义</th><th>单位</th></tr></thead><tbody>
+<tr><td>L</td><td>Attention 层数</td><td>层</td></tr><tr><td>H<sub>kv</sub></td><td>每层 KV heads 数</td><td>head</td></tr><tr><td>d<sub>h</sub></td><td>每个 K/V head 的维度</td><td>元素</td></tr><tr><td>s</td><td>每个缓存元素的字节数</td><td>byte / 元素</td></tr><tr><td>T<sub>i</sub></td><td>请求 i 当前保留的已计算位置数</td><td>token</td></tr></tbody></table></div>
+<div class="equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>M</mi><mi>KV</mi></msub><mo>=</mo><mn>2</mn><mo>×</mo><mi>L</mi><mo>×</mo><msub><mi>H</mi><mi>kv</mi></msub><mo>×</mo><msub><mi>d</mi><mi>h</mi></msub><mo>×</mo><mi>s</mi><mo>×</mo><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>T</mi><mi>i</mi></msub></mrow></math><span class="eqno">(1.3)</span></div>
+<p>系数 2 代表 K 和 V。GQA（Grouped-Query Attention，分组查询注意力）让多个 query heads 使用较少的 KV heads，所以这里使用的是 <strong>KV heads 数</strong>。同样，要优先读取配置中的显式 <code>head_dim</code>；<code>hidden_size / num_attention_heads</code> 只有在具体模型满足该关系时才成立。</p>
+
+<div class="example"><h3>例题 1.1　标准教学模型的容量</h3>
+<p><span class="step">已知。</span> L=32，H<sub>kv</sub>=8，d<sub>h</sub>=128，KV 使用 BF16，因此 s=2 byte。8 个请求各保留 4096 个已计算位置。</p>
+<p><span class="step">建模。</span> 先求一位置跨所有层的缓存，再乘所有请求的位置数；采用式 (1.3) 的全部假设。</p>
+<pre><code>每 token KV = 2 × 32 × 8 × 128 × 2
+             = 131072 byte = 128 KiB
+总 KV        = 128 KiB × 4096 × 8 = 4 GiB</code></pre>
+<p><span class="step">检查。</span> 每项计数都应为无量纲的数量，s 提供字节单位。1 KiB=2¹⁰ byte，1 GiB=2³⁰ byte；这里没有使用十进制 GB。</p>
+<p><span class="step">工程解释。</span> 在假设不变时，请求数翻倍会让理想 KV 翻倍，KV heads 从 8 降至 1 会让理想 KV 降至八分之一。实际架构改变后，需要重新检查假设。</p></div>
+
+<h3>分页带来的第二种容量</h3>
+<p>缓存通常按块分配。设块大小为 <var>b</var> token，一个请求保留 <var>T</var><sub>i</sub> 个位置，则至少需要 ⌈T<sub>i</sub>/b⌉ 个块；最后一块可能只填了一部分。各请求独立分配且无共享时，槽位近似为：</p>
+<div class="equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>S</mi><mi>slots</mi></msub><mo>=</mo><munder><mo>∑</mo><mi>i</mi></munder><mrow><mo>⌈</mo><mfrac><msub><mi>T</mi><mi>i</mi></msub><mi>b</mi></mfrac><mo>⌉</mo></mrow><mo>×</mo><mi>b</mi></mrow></math><span class="eqno">(1.4)</span></div>
+<p>例题 1.1 若每请求改为 4097 个位置，且教学块大小 b=16：理想载荷约为 4.00098 GiB；每请求分配 4112 个槽位后，取整载荷为 4.015625 GiB。差值来自块内空槽，仍未包括真实 backend 的对齐、分组、元数据和预留。</p>
+
+<div class="example"><h3>例题 1.2　用真实 config 检验直觉</h3>
+<p><span class="step">已知。</span> <a href="https://huggingface.co/Qwen/Qwen3-0.6B/raw/main/config.json">Qwen3-0.6B 官方配置</a>给出 L=28、H<sub>kv</sub>=8、head_dim=128。假定运行时 KV 为 BF16，4 个请求各保留 1024 个位置。</p>
+<pre><code>每 token KV = 2 × 28 × 8 × 128 × 2 = 114688 byte = 112 KiB
+总 KV        = 112 KiB × 1024 × 4 = 448 MiB = 0.4375 GiB</code></pre>
+<p><span class="step">检查。</span> 该配置的 hidden_size=1024、query heads=16；1024/16=64，却不等于显式 head_dim=128。因此，仅凭 hidden_size 反推 head_dim 会把这个例子的缓存低估一半。</p>
+<p><span class="step">工程解释。</span> 理论使用官方配置，运行结论使用实际 checkpoint revision、有效配置与 KV dtype。模型名称本身不构成容量参数。</p></div>
+
+<figure class="interactive" id="calculator">
+<h3>图 1.3　标准 KV 容量计算器</h3>
+<p class="small">所有请求等长，无共享、压缩或分片。取整值只加入分页尾块；它不是设备峰值或 vLLM 整池大小。先手算，再用计算器核对。</p>
+<div class="controls"><button type="button" id="preset-toy">例题 1.1</button><button type="button" id="preset-qwen">例题 1.2</button><button type="button" id="preset-tail">4097：分页尾块</button></div>
+<form id="kv-form"><div class="calculator-grid">
+<label><span>层数 L</span><input id="kv-layers" name="layers" type="number" min="1" max="4096" step="1" value="32" required></label>
+<label><span>KV heads H<sub>kv</sub></span><input id="kv-heads" name="heads" type="number" min="1" max="4096" step="1" value="8" required></label>
+<label><span>head 维度 d<sub>h</sub></span><input id="kv-dim" name="dim" type="number" min="1" max="65536" step="1" value="128" required></label>
+<label><span>KV 元素字节 s</span><select id="kv-bytes" name="bytes"><option value="2">2：BF16 / FP16</option><option value="1">1：FP8 / INT8 载荷</option><option value="4">4：FP32</option></select></label>
+<label><span>每请求保留位置 T</span><input id="kv-tokens-input" name="tokens" type="number" min="1" max="100000000" step="1" value="4096" required></label>
+<label><span>请求数 B</span><input id="kv-requests" name="requests" type="number" min="1" max="1000000" step="1" value="8" required></label>
+<label><span>教学块大小 b</span><input id="kv-block" name="block" type="number" min="1" max="65536" step="1" value="16" required></label>
+</div></form>
+<div id="kv-results" aria-live="polite" aria-atomic="true"><div class="results"><div><span class="result-label">每 token 跨所有层</span><output class="result-value" id="kv-per-token">128 KiB</output></div><div><span class="result-label">理想载荷</span><output class="result-value" id="kv-ideal">4 GiB</output></div><div><span class="result-label">按块取整载荷</span><output class="result-value" id="kv-rounded">4 GiB</output></div></div><p class="small" id="kv-waste">每请求 4096 个槽位；尾块空槽载荷共 0 MiB。</p></div>
+<p id="kv-error" class="error" role="status"></p>
+<figcaption>FP8/INT8 选项只估算元素载荷，额外 scale、量化元数据和对齐未计入。无 JavaScript 时显示例题 1.1 的静态结果。</figcaption>
+</figure>
+</section>
+
+<section id="memory">
+<h2>1.4　“权重能装下”为什么不够</h2>
+<p>设一个模型有 7×10⁹ 个实际驻留参数，全部 BF16。原始权重需要 14×10⁹ byte，约 13.04 GiB。若再加例题 1.1 的 4 GiB KV，已经约为 17.04 GiB，激活、workspace、Graph 和通信资源尚未计入。对 MoE 而言，每 token 激活的参数量反映部分计算工作，不能代替总驻留权重来估算设备容量。</p>
+<div class="equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>M</mi><mi>peak</mi></msub><mo>≈</mo><msub><mi>M</mi><mi>weights</mi></msub><mo>+</mo><msub><mi>M</mi><mi>KV/state</mi></msub><mo>+</mo><msub><mi>M</mi><mi>activation/workspace</mi></msub><mo>+</mo><msub><mi>M</mi><mi>graph/runtime</mi></msub><mo>+</mo><msub><mi>M</mi><mi>margin</mi></msub></mrow></math><span class="eqno">(1.5)</span></div>
+<p>式 (1.5) 是分项规划模型，各项可能共享或复用内存，最终需要峰值实测。容量分析的任务，是解释“哪些资源随模型、长度、并发和执行配置变化”，再为测量提供可检验的估算。</p>
+<p>vLLM 还可能预先分配较大的 KV 池。一个请求完成后，其块变为可回收或可复用，但设备预分配池未必缩小。因此应区分三个量：<strong>请求当前的逻辑状态、请求分配的物理块、引擎拥有的缓存池</strong>。设备工具显示的占用不能直接当成活跃请求 KV 载荷。第 7 周将追踪这些量各由哪个对象管理。</p>
+<figure class="textbook-illustration" id="figure-kv-pool">
+<button type="button" class="illustration-open" aria-label="放大图 1.4：逻辑 KV、已分配块与预分配池"><img src="../assets/figures/lesson01-kv-pool-v1.png" alt="教学块大小为4：逻辑历史是5个已计算位置；请求分配两个块共8个槽，其中3个已分配但未填；缓存池有三个块共12个槽，第三块的4个槽空闲。" decoding="async"></button>
+<figcaption>图 1.4　<strong>同一个请求，三种计数口径：5、8、12。</strong>块大小 4 是为便于读图选取的教学值，假设无共享和额外预留。这些数是位置或槽位，不是 GiB，也不代表 vLLM 的实际默认配置。</figcaption>
+<p class="figure-reading">第一行 Logical KV 是已计算历史；第二行 Allocated blocks 是请求已分配的两个块，斜线的 3 个槽属于请求但尚未填入状态；第三行 Preallocated pool 是引擎的整个池，灰色 free block 可供分配。请求完成后，块可回到可用资源或保留供复用，整个池未必缩小。若每槽载荷相同，5、8、12 分别乘每槽载荷，得到三个对应的容量口径。</p>
+</figure>
+<details class="answer"><summary>概念检查 1.2：请求结束后设备占用没有下降，能否直接判断内存泄漏？</summary><div class="answer-body"><p>不能。引擎可能保留预分配池，缓存也可能为前缀复用保留块。应核对可用块、引用计数、运行时保留内存及重复负载中的增长趋势。设备占用是线索，尚不足以确定泄漏。</p></div></details>
+</section>
+
+<section id="performance">
+<h2>1.5　从工作量提出性能假设</h2>
+<p>Prefill 和 Decode 使用相同的模型权重，却有不同的输入组织。Prefill 一次带来多个新位置，线性层可以形成较大的矩阵操作；普通 Decode 每个请求每步只带来一个新位置。小 batch 下，后者能分摊权重读取和设备调用的工作较少。增大 batch 可能增加复用，也会增加缓存需求和一次执行的工作量。</p>
+<p>对本章的全 Attention 模型，Prefill 的注意力部分随 prompt 长度近似呈平方增长，普通 Decode 的注意力部分随保留历史长度增长。这个判断只涉及注意力部分：线性层、MoE、窗口、压缩、稀疏索引、硬件布局和通信都会改变全模型的成本。</p>
+<div class="box boundary"><div class="label">从推断到证据</div><p>“小 batch Decode 可能受到权重带宽或启动开销影响”是有机制依据的假设。“Prefill 一定算力受限、Decode 一定带宽受限”不是可直接采用的结论。判断瓶颈还需要长度、batch、实际 kernel、通信与 profiler 的证据。</p></div>
+<p>本周只练习把现象转成问题：输入变长增加了哪部分计算与状态？batch 增加能复用什么，又引入什么等待？设备变多增加了什么容量，也带来什么通信？第 3 周用 Roofline 和算术强度把这些问题量化，第 12–13 周再追踪 TP 的实际代价。</p>
+</section>
+
+<section id="metrics">
+<h2>1.6　先定义时间边界，再讨论快慢</h2>
+<p>设 t₀ 为请求开始时间，t₁ 为第一个输出 token 的观察时间，t<sub>N</sub> 为最后一个输出 token 的观察时间，t<sub>done</sub> 为请求完成时间，N 为实际输出 token 数。明确同一观察位置后，可以定义：</p>
+<div class="table-scroll"><table><caption>表 1.5　指标的数学含义与解释边界。</caption><thead><tr><th>指标</th><th>定义</th><th>回答的问题</th></tr></thead><tbody>
+<tr><td>TTFT<br>Time to First Token</td><td>t₁ − t₀</td><td>多久能看到第一份输出？客户端口径通常还包含网络、处理和排队。</td></tr><tr><td>TPOT<br>Time per Output Token</td><td>(t<sub>N</sub> − t₁) / (N−1)，N&gt;1</td><td>首 token 后，平均多久产生一个后续 token？</td></tr><tr><td>ITL<br>Inter-Token Latency</td><td>t<sub>j</sub> − t<sub>j−1</sub>，j≥2</td><td>相邻输出之间的间隔是否平稳？</td></tr><tr><td>E2E<br>End-to-End Latency</td><td>t<sub>done</sub> − t₀</td><td>整个请求多久完成？</td></tr><tr><td>聚合输出吞吐</td><td>窗口内输出 token 总数 / 窗口时长</td><td>系统在该窗口完成了多少输出工作？</td></tr>
+</tbody></table></div>
+<figure>
+<svg class="diagram" viewBox="0 0 760 170" role="img" aria-labelledby="timeline-title timeline-desc"><title id="timeline-title">图 1.5：一条手工构造的输出时间线</title><desc id="timeline-desc">请求从零毫秒开始，五个输出分别在125、145、165、185、205毫秒到达。首token等待125毫秒，随后间隔20毫秒。</desc>
+<defs><marker id="time-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#176759"/></marker></defs>
+<path d="M35 89H725" class="line" marker-end="url(#time-arrow)"/>
+<g font-size="14" text-anchor="middle"><path d="M45 78V101M412 78V101M471 78V101M530 78V101M589 78V101M648 78V101" stroke="#203b55" stroke-width="2"/><text x="45" y="123">0</text><text x="412" y="123">125</text><text x="471" y="123">145</text><text x="530" y="123">165</text><text x="589" y="123">185</text><text x="648" y="123">205 ms</text><text x="45" y="63">请求</text><text x="412" y="63">y₁</text><text x="471" y="63">y₂</text><text x="530" y="63">y₃</text><text x="589" y="63">y₄</text><text x="648" y="63">y₅</text><text x="226" y="27" class="title">TTFT = 125 ms</text><text x="533" y="27" class="title">4 个间隔，各 20 ms</text></g></svg>
+<figcaption>图 1.5　教学时间线，不是设备实测。假定请求在最后一个 token 到达时完成，TPOT=(205−125)/4=20 ms，E2E=205 ms。</figcaption>
+</figure>
+<p>若 N=1，TPOT 在上述定义下没有分母；某些实现用 0 占位，不能把它理解为零生成成本。若流式协议一次 chunk 携带多个 token，chunk 时间戳也不能还原 chunk 内逐 token 的生成时刻。报告必须说明观察的是 token 事件还是 chunk 事件。</p>
+<p>本地 <a href="../../vllm-main-261013/vllm/v1/metrics/stats.py">metrics/stats.py</a> 的平均输出 token 时间使用首个到最后一个生成事件，分母排除第一个 token。客户端 benchmark 的边界仍需单独核对。TTFT 不等于 Prefill kernel 时间，因为请求进入、排队、数据处理和输出传递也可能被包含。</p>
+<div class="box"><div class="label">本周测量口径</div><p>离线 <code>LLM.generate</code> 等整个批次完成后返回。本课脚本测量批次 wall time，并用批次实际输出数除以它，得到聚合输出 token/s。该时长包含 Prefill、Decode 和调用端输出处理。脚本没有逐请求首 token 或逐 token 时间戳，因此不能报告流式 TTFT、ITL，也不能把总耗时除以输出长度称为纯 Decode 速度。</p></div>
+<details class="answer"><summary>概念检查 1.3：总 token/s 增加 50%，是否意味着用户等待时间缩短？</summary><div class="answer-body"><p>不能。更大的 batch 可能使系统同时完成更多输出，同时增加每次执行和排队时间。需要同时观察单请求 TTFT、后续 token 间隔、E2E 和负载条件。吞吐与延迟回答不同问题。</p></div></details>
+</section>
+
+<section id="source">
+<h2>1.7　把模型映射到 vLLM V1</h2>
+<p>模型定义计算规则，引擎决定当前执行哪些请求、为它们安排多少 token、怎样管理缓存，并把结果送回调用端。一次请求的执行因而跨越两个层次：模型内部的张量运算，与引擎维护的请求和资源状态。</p>
+<p>图 1.6 表示单个 DP 引擎的概念数据流。横向箭头跨越职责边界；它们不表示同一线程里的直接函数调用。V1 通常通过多个进程分离客户端、EngineCore 和设备执行，具体通信形式取决于配置。参见<a href="https://docs.vllm.ai/en/stable/design/arch_overview/">官方进程架构说明</a>；方法行为以下面的本地快照为准。</p>
+<figure><svg class="diagram" viewBox="0 0 760 430" role="img" aria-labelledby="engine-title engine-desc"><title id="engine-title">图 1.6：客户端、EngineCore 与设备执行的数据流</title><desc id="engine-desc">客户端提交请求到EngineCore，调度器安排token与KV，Executor把工作交给Worker和ModelRunner。结果返回EngineCore更新请求状态，再通过输出通道回到客户端；EngineCore持续迭代。</desc>
+<defs><marker id="flow-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#176759"/></marker></defs>
+<rect x="10" y="10" width="216" height="390" rx="4" fill="#f4f2eb"/><rect x="267" y="10" width="228" height="390" rx="4" fill="#eef3f0"/><rect x="536" y="10" width="214" height="390" rx="4" fill="#f0f3f6"/>
+<g text-anchor="middle" font-size="14"><text x="118" y="42" class="title">调用端 / Client</text><text x="381" y="42" class="title">EngineCore</text><text x="643" y="42" class="title">设备执行端</text>
+<rect class="panel" x="29" y="74" width="178" height="61" rx="3"/><text x="118" y="100">LLM.generate</text><text x="118" y="121" font-size="12">输入处理 / EngineCoreClient</text>
+<rect class="panel" x="289" y="74" width="184" height="61" rx="3"/><text x="381" y="99">请求队列</text><text x="381" y="121" font-size="12">请求进入引擎状态</text>
+<rect class="panel" x="289" y="166" width="184" height="63" rx="3"/><text x="381" y="192">Scheduler / KV 管理</text><text x="381" y="214" font-size="12">决定请求与 token 预算</text>
+<rect class="panel" x="557" y="166" width="172" height="63" rx="3"/><text x="643" y="192">Worker / ModelRunner</text><text x="643" y="214" font-size="12">模型、算子与采样</text>
+<rect class="panel" x="289" y="283" width="184" height="64" rx="3"/><text x="381" y="309">更新请求 / 缓存状态</text><text x="381" y="332" font-size="12">产生输出，继续迭代</text>
+<rect class="panel" x="29" y="283" width="178" height="64" rx="3"/><text x="118" y="309">LLMEngine.step</text><text x="118" y="332" font-size="12">接收输出 / output_processor</text></g>
+<g class="line" marker-end="url(#flow-arrow)"><path d="M207 104H289"/><path d="M381 135V166"/><path d="M473 197H557"/><path d="M643 229V315H473"/><path d="M289 315H207"/><path d="M289 315H277V247H381V229"/></g>
+<g font-size="11" text-anchor="middle" class="muted"><text x="248" y="91">请求通道</text><text x="515" y="180">Executor</text><text x="549" y="302">执行结果</text><text x="247" y="301">输出通道</text><text x="380" y="377">Schedule → Execute → Sample → Update</text></g></svg>
+<figcaption>图 1.6　职责与数据流。实际执行可能包含多 Worker、异步 batch queue 和专用采样路径；本图用来建立边界，不枚举所有运行配置。</figcaption></figure>
+
+<h3>五个必读方法：沿着问题读，75 分钟封顶</h3>
+<p>阅读方法先于逐行阅读：先找输入与输出，再找对象拥有的状态，最后找它把工作交给谁。下列行号用于当前快照的导航；快照变化后，以类名和方法名为准。整个 Scheduler、Runner 和 kernel 的阅读留给后续章节。</p>
+<div class="table-scroll"><table><caption>表 1.6　源码导读范围。</caption><thead><tr><th>时间</th><th>入口与定位</th><th>本周的问题</th></tr></thead><tbody>
+<tr><td>10 分钟</td><td><a href="../../vllm-main-261013/vllm/entrypoints/llm.py">LLM.generate</a><br>约第 418 行</td><td>用户入口把什么交给 _run_completion？</td></tr>
+<tr><td>15 分钟</td><td><a href="../../vllm-main-261013/vllm/entrypoints/common/offline.py">OfflineInferenceMixin</a><br>_run_completion / _run_engine，约第 340 / 589 行</td><td>请求如何加入？循环何时结束？为何返回完成后的批次结果？</td></tr>
+<tr><td>10 分钟</td><td><a href="../../vllm-main-261013/vllm/v1/engine/llm_engine.py">LLMEngine.step</a><br>约第 319 行</td><td>从哪里接收输出？随后进行哪些客户端处理？</td></tr>
+<tr><td>25 分钟</td><td><a href="../../vllm-main-261013/vllm/v1/engine/core.py">EngineCore.step</a><br>约第 657 行</td><td>Schedule、Execute、Sample、Update 怎样闭合？</td></tr>
+<tr><td>15 分钟</td><td><a href="../../vllm-main-261013/vllm/v1/core/sched/scheduler.py">Scheduler.schedule 开头</a><br>约第 591 行</td><td>计算进度、目标进度与 token budget 各是什么意思？</td></tr>
+</tbody></table></div>
+<p>使用 <code>rg -n</code> 搜索方法名并查看附近实现，例如：</p>
+<pre><code>rg -n 'def generate' vllm-main-261013/vllm/entrypoints/llm.py
+rg -n 'def step' vllm-main-261013/vllm/v1/engine/core.py
+rg -n 'def schedule' vllm-main-261013/vllm/v1/core/sched/scheduler.py</code></pre>
+
+<h3>读出闭环，而不迷失在分支里</h3>
+<p>从 EngineCore 的普通 step 路径摘出以下短片段。它省略 grammar、abort、日志等分支，只作为阅读提示，不能替换真实实现：</p>
+<pre><code>scheduler_output = self.scheduler.schedule(self._should_throttle_prefills())
+future = self.model_executor.execute_model(scheduler_output, non_block=True)
+# …… grammar 与其他处理 ……
+model_output = future.result()
+if model_output is None:
+    model_output = self.model_executor.sample_tokens(grammar_output)
+engine_core_outputs = self.scheduler.update_from_output(
+    scheduler_output, model_output
+)</code></pre>
+<p><code>schedule</code> 决定本次执行内容；Executor 发起执行并返回 future；获得模型结果后，必要时通过专用路径采样；最后由 Scheduler 更新请求与缓存状态。新输出改变了下一轮需要计算的内容，闭环由此继续。第 9 周再对照 batch queue 和 async 路径。</p>
+<div class="box"><div class="label">源码事实：同名 step，职责不同</div><p>当前本地 <code>LLMEngine.step()</code> 通过 <code>engine_core.get_output()</code> 接收输出，再交给 output_processor；它没有直接调用 <code>EngineCore.step()</code>。EngineCore 在自己的执行循环里推进工作。因此，客户端反复 step 与引擎反复 step 通过数据流关联，不能画成跨越 IPC 的直接 Python 调用栈。</p></div>
+
+<h3>用统一 token 进度理解 Prefill 和 Decode</h3>
+<p>Scheduler 开头的注释强调两种进度：<code>num_computed_tokens</code> 表示计算进度；<code>num_tokens_with_spec</code> 表示包含 prompt、输出与投机 token 的目标进度。调度器为请求安排 token，让计算进度追上目标，受本轮资源预算约束。因此，Prefill 和 Decode 是推理概念，但调度代码可以采用统一表达。</p>
+<div class="example"><h3>例题 1.3　128 个输入位置如何变成一个待计算位置</h3><p>无前缀命中时，初始 prompt 有 128 个位置需要计算。完整 Prefill 后，计算进度到 128，同时采样出 y₁；已知输入与输出共 129 个 token，下一轮通常需要计算 y₁ 这个位置。这里同一种“目标进度减计算进度”的描述，先覆盖多个输入 token，又覆盖一个新输出 token。实际字段何时更新、是否加入预留或投机状态，第 6 周再逐项追踪。</p></div>
+<p>本周在报告中填一张方法职责表：所在进程、输入对象、输出对象、主要状态、下一跳。特别标出“安排 token”和“运行模型”分别属于谁。更多入口见<a href="../source-map.html">源码地图</a>，本周无需展开所有代码组。</p>
+</section>
+
+<section id="work-models">
+<h2>1.8　把锚点连接到你的工作模型</h2>
+<p>本章的标准模型用于训练推演能力。DeepSeek-V4.1-Flash 和 GLM-5.3-Flash 还包含模型专用的执行与状态；适配工作首先要确认商品名称、checkpoint 配置和注册类之间的对应关系。不能看到熟悉的模型系列，就假定所有层都采用同一种缓存。</p>
+<div class="table-scroll"><table><caption>表 1.7　工作案例的源码线索；本周作为索引，后续再深入。</caption><thead><tr><th>案例</th><th>本地证据</th><th>容量与执行边界</th></tr></thead><tbody>
+<tr><td>DeepSeek-V4.1-Flash</td><td><a href="../../vllm-main-261013/vllm/models/deepseek_v41/__init__.py">模型入口</a>、<a href="../../vllm-main-261013/vllm/models/deepseek_v41/sparse_mla.py">sparse_mla</a>、<a href="../../vllm-main-261013/vllm/models/deepseek_v41/decoder_replay_layers.py">decoder replay</a></td><td>有专用压缩/稀疏缓存和执行路径。全层相同 K/V 的容量模型不足以描述它。</td></tr>
+<tr><td>GLM-5.3-Flash</td><td><a href="../../vllm-main-261013/vllm/models/glm5next/__init__.py">glm5next 入口</a>、<a href="../../vllm-main-261013/vllm/models/glm5next/common/model.py">common/model</a>、<a href="../../vllm-main-261013/vllm/models/glm5next/common/kda.py">KDA</a></td><td>实现依据 layer_types 区分 KDA/MLA。需要按层类型分析缓存与递推状态。</td></tr>
+</tbody></table></div>
+<p>DeepSeek 的非对称 Causal Encoder–Decoder 结构见<a href="https://www.deepseek.com/news/deepseek-v4-1-flash/">官方模型介绍</a>。本地实现与实际 checkpoint/revision 是否完全对应，仍需核对。源码存在是阅读事实，尚不能证明某个工作镜像已启用或支持这条路径。</p>
+<p>本周只记录实际 <code>config.json</code> 的 <code>architectures</code> 和相关层类型。第 15 周建立注册映射，第 37 周比较工作模型，第 39–46 周深入长上下文、混合状态、稀疏与投机。这个安排让你先掌握分析工具，再把工具带入复杂架构。</p>
+</section>
+
+<section id="lab">
+<h2>1.9　实验：从可核对的估算到可复现的基线</h2>
+<p>本周实验回答两个问题：容量推导是否与逐项计算一致？在固定软件栈和小模型下，只改变输入长度或批次请求数，会观察到怎样的批次耗时与聚合吞吐？前者验证算术和假设，后者建立运行事实。两者不相互替代。</p>
+<p>120 分钟建议分为环境记录 25 分钟、估算核对 15 分钟、基线运行与分析 60 分钟、数据整理 20 分钟。使用已有验证镜像和空闲单卡；复杂安装问题计入预算，必要时把设备实测顺延，并保留为待完成。</p>
+
+<h3>实验 A　不使用加速器的容量核对</h3>
+<p><a href="../labs/lesson01_estimate.py">容量脚本</a>仅使用 Python 标准库。以下命令从 Linux 的课程目录执行；Windows 对应使用 <code>.venv\Scripts\python.exe</code>。</p>
+<pre><code>uv venv .venv
+.venv/bin/python labs/lesson01_estimate.py
+.venv/bin/python labs/lesson01_estimate.py --tokens 4097
+.venv/bin/python labs/lesson01_estimate.py --layers 28 --kv-heads 8 \
+  --head-dim 128 --tokens 1024 --requests 4</code></pre>
+<p>三个结果应分别核对到：每 token 128 KiB 且理想 KV 为 4 GiB；4097 位置的取整载荷为 4.015625 GiB；Qwen 示例为 0.4375 GiB。再手算 KV heads 从 8 到 1，以及请求数从 8 到 16 的变化，说明前提和倍率。</p>
+
+<h3>实验 B　记录真实运行栈</h3>
+<p>本周先完成 H20 或 910C 中最方便的一个平台；910B 是补充平台。你报告 vLLM 0.31.0 与 vLLM-Ascend 0.30.0rc1，<a href="https://docs.vllm.ai/projects/ascend/en/main/community/versioning_policy.html">Ascend 配套版本表</a>把 0.30.0rc1 对应到 vLLM 0.30.0。因此需要分别读取 NVIDIA 与 Ascend 镜像内的实际包版本，不能推定两者相同。</p>
+<p>在独立学习目录创建继承镜像已安装依赖的环境。将解释器路径替换为该已验证镜像实际使用的 Python，以保持相同 ABI 和软件栈。</p>
+<pre><code>uv venv --system-site-packages --python /path/to/validated/python .venv
+.venv/bin/python -c 'import importlib.metadata as m; import sys; print(sys.version); print({n: m.version(n) for n in ("vllm", "torch", "transformers")})'
+.venv/bin/python -c 'import torch; print("torch CUDA runtime:", torch.version.cuda)'</code></pre>
+<p>Ascend 镜像另行记录插件、torch_npu、设备和 CANN：</p>
+<pre><code>.venv/bin/python -c 'import importlib.metadata as m; print({n: m.version(n) for n in ("vllm", "vllm-ascend", "torch", "torch-npu")})'
+npu-smi info
+cat /usr/local/Ascend/ascend-toolkit/latest/version.cfg</code></pre>
+<p>CANN 的安装路径可能随镜像变化；文件不存在时读取实际 toolkit 路径或安装清单。NVIDIA 用 <code>nvidia-smi</code> 记录设备和驱动，必要时用 <code>nvcc --version</code> 记录安装的 toolkit。<code>nvidia-smi</code> 的 CUDA Version 表示驱动支持的版本，不能用它替代 PyTorch 运行时或镜像内 toolkit 的安装版本。参见<a href="https://docs.nvidia.com/deploy/nvidia-smi/index.html">NVIDIA 官方说明</a>。</p>
+<div class="box boundary"><div class="label">阅读版本与运行版本</div><p>本地源码快照不含 .git，精确 commit 尚未确认。Ascend 主线的 <a href="../../vllm-ascend-main-1013/.github/vllm-main-verified.commit">vllm-main-verified.commit</a> 是插件指定的配套目标，不能据此证明本地 vLLM 快照就是该 commit。阅读定位与运行日志必须分别记录，版本差异本身也是适配证据。</p></div>
+
+<h3>实验 C　四组受控的离线基线</h3>
+<p>选择已有的本地小型 Dense checkpoint，建议镜像已支持的 Qwen3-0.6B；若换模型，记录理由及配置。<a href="../labs/lesson01_baseline.py">基线脚本</a>使用公开 LLM 接口，在配套镜像里验证兼容性。它不自动下载模型，不能把本课小模型参数直接套到大型生产服务。</p>
+<div class="table-scroll"><table><caption>表 1.8　实验变量。每组预热一次，测量三次，共 12 条测量数据。</caption><thead><tr><th>条件</th><th>每请求输入 P</th><th>每请求输出 N</th><th>批次请求 B</th><th>主要比较</th></tr></thead><tbody>
+<tr><td>A</td><td>128</td><td>32</td><td>1</td><td>基准</td></tr><tr><td>B</td><td>128</td><td>32</td><td>4</td><td>A/B：改变 batch</td></tr><tr><td>C</td><td>1024</td><td>32</td><td>1</td><td>A/C：改变输入长度</td></tr><tr><td>D</td><td>1024</td><td>32</td><td>4</td><td>长输入下的 batch 对照</td></tr>
+</tbody></table></div>
+<p>固定 TP=1、BF16、max_model_len=2048、max_num_seqs=4、禁用前缀缓存、enforce_eager=True、seed=17，并强制每请求生成 32 个 token。合成 token 输入在计时前构造，用于控制负载；它不用于质量评测。Eager 用于建立较容易解释的起点，最终优化配置将在后续课程研究。其他调度默认值以有效配置与启动日志为准。</p>
+<p>只暴露一张空闲 H20，替换模型目录、镜像标识和 revision 后运行：</p>
+<pre><code>CUDA_VISIBLE_DEVICES=0 .venv/bin/python labs/lesson01_baseline.py \
+  --model /models/Qwen3-0.6B --output records/lesson01-h20-run01.json \
+  --image-id '实际镜像tag或digest' --model-revision '实际模型revision'</code></pre>
+<p>910C 或补充 910B 使用对应镜像与设备可见性设置：</p>
+<pre><code>ASCEND_RT_VISIBLE_DEVICES=0 .venv/bin/python labs/lesson01_baseline.py \
+  --model /models/Qwen3-0.6B --output records/lesson01-910c-run01.json \
+  --image-id '实际镜像tag或digest' --model-revision '实际模型revision'</code></pre>
+<p>脚本单独记录模型初始化时间，核对实际输入输出长度，保存原始值、中位数、版本、可见设备与有效配置。输出文件使用新名称，不覆盖已有数据。遇到 import、模型支持、设备或版本失败时，保留原始错误和栈信息，作为待排查问题。</p>
+
+<h3>实验 D　把结果写成可以反驳的解释</h3>
+<p>先报告观察，再提出机制，最后说明缺失的测量。例如：“B 的中位聚合输出吞吐高于 A；可能因为权重复用或调用开销摊薄；需要 profiler 区分两种机制。”这里吞吐变化是观察，原因是待验证假设，两者在报告中应有不同地位。</p>
+<p>若 C 比 A 耗时更长，差异可能同时来自 Prefill 和后续更长的历史 KV 访问。两者之差不能直接称为纯 Prefill 时间。三次重复适合本课初步比较，不能支持可靠的 P95/P99 或生产稳定性结论。没有出现预期趋势时，同样记录波动、其他负载与下一项测量。</p>
+<div class="box"><div class="label">提交的数据与分析</div><p>提交实际环境版本、命令和有效配置、四组原始数据、批次时长与聚合吞吐的中位数，以及一个假设和它需要的验证。学习投入和机器后台运行时间分开记录。当前讲义没有填入任何硬件性能结果。</p></div>
+</section>
+
+<section id="exercises">
+<h2>1.10　习题、参考解答与通过标准</h2>
+<p>先关闭参考解答，在纸上或报告中完成必做题。解释题应包含因果关系和适用条件；源码题应指出实际方法；数字题应写单位。选做题用于你已有工作案例的延伸，不增加本周必修预算。</p>
+<h3>必做题 / CORE PROBLEMS</h3>
+<ol><li><strong>请求轨迹。</strong> P=128、N=32，按 §1.1 的假设，首输出来自哪次计算？最后输出刚采样时有多少已计算位置？为什么？</li>
+<li><strong>容量推导。</strong> 重算例题 1.1 和 1.2，解释为何使用 KV heads。若请求长度不同，应怎样修改公式？</li>
+<li><strong>容量诊断。</strong> 一个 MoE 模型的激活参数很少，但设备仍放不下。给出需要检查的内存项，说明激活参数为何不足以估算驻留权重。</li>
+<li><strong>源码边界。</strong> LLMEngine.step 是否直接调用 EngineCore.step？指出本地证据，并标出图 1.6 中的请求和输出通道。</li>
+<li><strong>调度状态。</strong> 用 128-token prompt 和刚生成的 y₁，解释统一 token 进度如何覆盖 Prefill 与 Decode。区分概念轨迹和精确字段更新时间。</li>
+<li><strong>测量设计。</strong> 为什么本课离线脚本不能报告流式 TTFT？若要验证“batch 越大用户越快”，还需要哪些数据？</li>
+<li><strong>架构边界。</strong> 为什么不能直接用式 (1.3) 估算两个工作模型的全部缓存？各指出一个本地实现线索。</li></ol>
+<h3>选做题 / TRANSFER PROBLEMS</h3>
+<ol start="8"><li>例题 1.1 的 8 个请求分别保留 1024、2048、3072、4096、1024、2048、3072、4096 个位置。计算理想 KV，解释为什么统一按最长长度估算会高估活跃载荷。</li><li>若输出到达时间为 125、145、175、185、205 ms，计算 TTFT、四个 ITL 和 TPOT。平均值隐藏了哪一种波动？</li><li>设计一个下一阶段实验，用来区分“小 batch 下权重读取较贵”和“设备调用开销较贵”。写出希望从 profiler 看见的证据，不要求本周完成实测。</li></ol>
+
+<details class="answer"><summary>完成后展开：必做题参考解答与推理</summary><div class="answer-body">
+<p><strong>1.</strong> 完整 Prefill 处理 prompt 最后位置并采样 y₁。31 次普通 Decode 产生其余输出，最后采样时已计算 128+31=159 个位置，y₃₂ 尚未再次输入模型。分块、投机和物理预留须另行考虑。</p>
+<p><strong>2.</strong> 例题 1.1 为每 token 128 KiB、总量 4 GiB；例题 1.2 为每 token 112 KiB、总量 448 MiB。GQA 的 K/V 存储由 KV heads 决定。不同长度使用 ΣTᵢ；物理独立分页时使用 Σ⌈Tᵢ/b⌉b。</p>
+<p><strong>3.</strong> 检查总驻留权重、缓存/状态、激活与 workspace、Graph/通信运行时资源和余量。路由只选择部分专家参与一个 token 的计算，未参与本 token 的专家参数仍可能驻留设备。</p>
+<p><strong>4.</strong> 当前 LLMEngine.step 调用 engine_core.get_output，再做 output_processor 处理；EngineCore 在独立执行循环里调度并运行模型。数据通道跨越职责与进程边界，同名 step 不构成直接调用关系。</p>
+<p><strong>5.</strong> 初始多个 prompt 位置待计算，完整 Prefill 后新输出 y₁ 使目标比已计算进度多一个位置。统一进度差可覆盖两类负载；更新顺序和投机状态以 Scheduler 实现为准。</p>
+<p><strong>6.</strong> generate 返回完成后的批次结果，脚本只记录调用前后的时间，没有第一份输出或逐 token 的事件。还需流式逐请求 TTFT、ITL/TPOT、E2E，以及一致的并发/到达率、长度和缓存条件。</p>
+<p><strong>7.</strong> DeepSeek 本地包含 sparse_mla、压缩/稀疏与 decoder replay 路径；GLM common/model 按 layer_types 区分 KDA/MLA。应逐层、逐缓存平面分析状态、dtype 和分片，式 (1.3) 的全层相同 K/V 假设不成立。</p>
+</div></details>
+<details class="answer"><summary>选做题与诊断参考要点</summary><div class="answer-body">
+<p><strong>8.</strong> 位置数为 20480，总载荷=128 KiB×20480=2.5 GiB。统一按最长长度会算成 4 GiB；物理预分配或保留容量又是另一口径。</p><p><strong>9.</strong> TTFT=125 ms，ITL=20、30、10、20 ms，TPOT=20 ms。平均值掩盖了后续生成的不均匀间隔。</p><p><strong>10.</strong> 可固定模型、长度和 eager 配置扫描 batch，同时观察 kernel 间隙、主机提交时间、各 kernel 时长及内存带宽指标。仅看总吞吐不足以区分原因；带宽瓶颈要用实际访问量和可达到带宽判断。</p>
+<p><strong>诊断。</strong> 8×1024×4096×2=67108864 byte=64 MiB。transpose 通常返回改变 stride 的 view，后续 contiguous 或算子路径可能触发复制。设备 API 的主机返回可能早于设备完成；TP 的切分与通信要追踪具体层实现。权重以外还有其他内存项；聚合吞吐不能直接证明请求更快。</p>
+</div></details>
+
+<h3>通过标准与学习记录</h3>
+<p>必做题 1–3、6–7 能独立解释，4–5 能定位源码；两道容量例题单位正确；在一个实际平台完成四组基线并保留配置、原始数据；性能解释区分观察、假设和待验证。设备实验未完成时保持“待完成”，容量脚本通过不能替代硬件验收。</p>
+<p>使用<a href="../records/lesson01-report-template.html">第一课报告模板</a>组织提交内容，并更新<a href="../records/progress.html">学习进度</a>。下一课研究张量 shape、stride、layout、dtype 和异步执行：它们会解释为什么看似相同的计算路径出现隐式复制、同步或不同的 kernel 行为。</p>
+</section>
+
+<section id="references">
+<h2>1.11　资料与证据层次</h2>
+<p>公式和数字例题是有假设的理论估算；方法职责来自本地源码；链接中的架构、模型和版本信息来自相应官方资料；硬件性能必须由你实际运行产生。外部文档可能更新，引用时同时记录阅读日期与运行版本。</p>
+<ol><li><a href="https://docs.vllm.ai/en/stable/design/arch_overview/">vLLM 架构说明</a>：进程与组件职责。与本地方法路径对照阅读。</li><li><a href="https://arxiv.org/abs/2309.06180">PagedAttention 原论文</a>：缓存分页、碎片与共享的动机；第 7–8 周深入。</li><li><a href="https://huggingface.co/Qwen/Qwen3-0.6B/raw/main/config.json">Qwen3-0.6B 官方配置</a>：例题 1.2 的参数依据，实验以本地 revision 为准。</li><li><a href="https://www.deepseek.com/news/deepseek-v4-1-flash/">DeepSeek-V4.1-Flash 官方介绍</a>：架构线索，不能代替逐层缓存分析。</li><li><a href="https://docs.vllm.ai/projects/ascend/en/main/community/versioning_policy.html">vLLM-Ascend 版本策略</a>：配套版本依据；镜像内安装结果单独记录。</li><li><a href="https://docs.nvidia.com/deploy/nvidia-smi/index.html">NVIDIA nvidia-smi 文档</a>：驱动与 CUDA 版本口径。</li><li><a href="../records/source-snapshot.json">教学源码指纹</a>：所选教学锚点的 SHA256，不能当作整个仓库 commit。</li></ol>
+</section>
+<div class="chapter-end"><a href="../index.html">返回课表</a> · <a href="../editorial-guide.html">讲义编写规范</a><br>本课的中心练习：每一次性能判断，都能沿着“输入—计算—状态—输出—测量边界”追溯。</div>
