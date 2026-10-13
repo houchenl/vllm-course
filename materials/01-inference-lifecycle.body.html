@@ -148,7 +148,7 @@
 <figcaption>图 1.5　教学时间线，不是设备实测。假定请求在最后一个 token 到达时完成，TPOT=(205−125)/4=20 ms，E2E=205 ms。</figcaption>
 </figure>
 <p>若 N=1，TPOT 在上述定义下没有分母；某些实现用 0 占位，不能把它理解为零生成成本。若流式协议一次 chunk 携带多个 token，chunk 时间戳也不能还原 chunk 内逐 token 的生成时刻。报告必须说明观察的是 token 事件还是 chunk 事件。</p>
-<p>本地 <a href="../../vllm-main-261013/vllm/v1/metrics/stats.py">metrics/stats.py</a> 的平均输出 token 时间使用首个到最后一个生成事件，分母排除第一个 token。客户端 benchmark 的边界仍需单独核对。TTFT 不等于 Prefill kernel 时间，因为请求进入、排队、数据处理和输出传递也可能被包含。</p>
+<p>本地 <a href="../../vllm/vllm/v1/metrics/stats.py">metrics/stats.py</a> 的平均输出 token 时间使用首个到最后一个生成事件，分母排除第一个 token。客户端 benchmark 的边界仍需单独核对。TTFT 不等于 Prefill kernel 时间，因为请求进入、排队、数据处理和输出传递也可能被包含。</p>
 <div class="box"><div class="label">本周测量口径</div><p>离线 <code>LLM.generate</code> 等整个批次完成后返回。本课脚本测量批次 wall time，并用批次实际输出数除以它，得到聚合输出 token/s。该时长包含 Prefill、Decode 和调用端输出处理。脚本没有逐请求首 token 或逐 token 时间戳，因此不能报告流式 TTFT、ITL，也不能把总耗时除以输出长度称为纯 Decode 速度。</p></div>
 <details class="answer"><summary>概念检查 1.3：总 token/s 增加 50%，是否意味着用户等待时间缩短？</summary><div class="answer-body"><p>不能。更大的 batch 可能使系统同时完成更多输出，同时增加每次执行和排队时间。需要同时观察单请求 TTFT、后续 token 间隔、E2E 和负载条件。吞吐与延迟回答不同问题。</p></div></details>
 </section>
@@ -174,16 +174,16 @@
 <h3>五个必读方法：沿着问题读，75 分钟封顶</h3>
 <p>阅读方法先于逐行阅读：先找输入与输出，再找对象拥有的状态，最后找它把工作交给谁。下列行号用于当前快照的导航；快照变化后，以类名和方法名为准。整个 Scheduler、Runner 和 kernel 的阅读留给后续章节。</p>
 <div class="table-scroll"><table><caption>表 1.6　源码导读范围。</caption><thead><tr><th>时间</th><th>入口与定位</th><th>本周的问题</th></tr></thead><tbody>
-<tr><td>10 分钟</td><td><a href="../../vllm-main-261013/vllm/entrypoints/llm.py">LLM.generate</a><br>约第 418 行</td><td>用户入口把什么交给 _run_completion？</td></tr>
-<tr><td>15 分钟</td><td><a href="../../vllm-main-261013/vllm/entrypoints/common/offline.py">OfflineInferenceMixin</a><br>_run_completion / _run_engine，约第 340 / 589 行</td><td>请求如何加入？循环何时结束？为何返回完成后的批次结果？</td></tr>
-<tr><td>10 分钟</td><td><a href="../../vllm-main-261013/vllm/v1/engine/llm_engine.py">LLMEngine.step</a><br>约第 319 行</td><td>从哪里接收输出？随后进行哪些客户端处理？</td></tr>
-<tr><td>25 分钟</td><td><a href="../../vllm-main-261013/vllm/v1/engine/core.py">EngineCore.step</a><br>约第 657 行</td><td>Schedule、Execute、Sample、Update 怎样闭合？</td></tr>
-<tr><td>15 分钟</td><td><a href="../../vllm-main-261013/vllm/v1/core/sched/scheduler.py">Scheduler.schedule 开头</a><br>约第 591 行</td><td>计算进度、目标进度与 token budget 各是什么意思？</td></tr>
+<tr><td>10 分钟</td><td><a href="../../vllm/vllm/entrypoints/llm.py">LLM.generate</a><br>约第 418 行</td><td>用户入口把什么交给 _run_completion？</td></tr>
+<tr><td>15 分钟</td><td><a href="../../vllm/vllm/entrypoints/common/offline.py">OfflineInferenceMixin</a><br>_run_completion / _run_engine，约第 340 / 589 行</td><td>请求如何加入？循环何时结束？为何返回完成后的批次结果？</td></tr>
+<tr><td>10 分钟</td><td><a href="../../vllm/vllm/v1/engine/llm_engine.py">LLMEngine.step</a><br>约第 319 行</td><td>从哪里接收输出？随后进行哪些客户端处理？</td></tr>
+<tr><td>25 分钟</td><td><a href="../../vllm/vllm/v1/engine/core.py">EngineCore.step</a><br>约第 657 行</td><td>Schedule、Execute、Sample、Update 怎样闭合？</td></tr>
+<tr><td>15 分钟</td><td><a href="../../vllm/vllm/v1/core/sched/scheduler.py">Scheduler.schedule 开头</a><br>约第 591 行</td><td>计算进度、目标进度与 token budget 各是什么意思？</td></tr>
 </tbody></table></div>
 <p>使用 <code>rg -n</code> 搜索方法名并查看附近实现，例如：</p>
-<pre><code>rg -n 'def generate' vllm-main-261013/vllm/entrypoints/llm.py
-rg -n 'def step' vllm-main-261013/vllm/v1/engine/core.py
-rg -n 'def schedule' vllm-main-261013/vllm/v1/core/sched/scheduler.py</code></pre>
+<pre><code>rg -n 'def generate' vllm/vllm/entrypoints/llm.py
+rg -n 'def step' vllm/vllm/v1/engine/core.py
+rg -n 'def schedule' vllm/vllm/v1/core/sched/scheduler.py</code></pre>
 
 <h3>读出闭环，而不迷失在分支里</h3>
 <p>从 EngineCore 的普通 step 路径摘出以下短片段。它省略 grammar、abort、日志等分支，只作为阅读提示，不能替换真实实现：</p>
@@ -209,8 +209,8 @@ engine_core_outputs = self.scheduler.update_from_output(
 <h2>1.8　把锚点连接到你的工作模型</h2>
 <p>本章的标准模型用于训练推演能力。DeepSeek-V4.1-Flash 和 GLM-5.3-Flash 还包含模型专用的执行与状态；适配工作首先要确认商品名称、checkpoint 配置和注册类之间的对应关系。不能看到熟悉的模型系列，就假定所有层都采用同一种缓存。</p>
 <div class="table-scroll"><table><caption>表 1.7　工作案例的源码线索；本周作为索引，后续再深入。</caption><thead><tr><th>案例</th><th>本地证据</th><th>容量与执行边界</th></tr></thead><tbody>
-<tr><td>DeepSeek-V4.1-Flash</td><td><a href="../../vllm-main-261013/vllm/models/deepseek_v41/__init__.py">模型入口</a>、<a href="../../vllm-main-261013/vllm/models/deepseek_v41/sparse_mla.py">sparse_mla</a>、<a href="../../vllm-main-261013/vllm/models/deepseek_v41/decoder_replay_layers.py">decoder replay</a></td><td>有专用压缩/稀疏缓存和执行路径。全层相同 K/V 的容量模型不足以描述它。</td></tr>
-<tr><td>GLM-5.3-Flash</td><td><a href="../../vllm-main-261013/vllm/models/glm5next/__init__.py">glm5next 入口</a>、<a href="../../vllm-main-261013/vllm/models/glm5next/common/model.py">common/model</a>、<a href="../../vllm-main-261013/vllm/models/glm5next/common/kda.py">KDA</a></td><td>实现依据 layer_types 区分 KDA/MLA。需要按层类型分析缓存与递推状态。</td></tr>
+<tr><td>DeepSeek-V4.1-Flash</td><td><a href="../../vllm/vllm/models/deepseek_v41/__init__.py">模型入口</a>、<a href="../../vllm/vllm/models/deepseek_v41/sparse_mla.py">sparse_mla</a>、<a href="../../vllm/vllm/models/deepseek_v41/decoder_replay_layers.py">decoder replay</a></td><td>有专用压缩/稀疏缓存和执行路径。全层相同 K/V 的容量模型不足以描述它。</td></tr>
+<tr><td>GLM-5.3-Flash</td><td><a href="../../vllm/vllm/models/glm5next/__init__.py">glm5next 入口</a>、<a href="../../vllm/vllm/models/glm5next/common/model.py">common/model</a>、<a href="../../vllm/vllm/models/glm5next/common/kda.py">KDA</a></td><td>实现依据 layer_types 区分 KDA/MLA。需要按层类型分析缓存与递推状态。</td></tr>
 </tbody></table></div>
 <p>DeepSeek 的非对称 Causal Encoder–Decoder 结构见<a href="https://www.deepseek.com/news/deepseek-v4-1-flash/">官方模型介绍</a>。本地实现与实际 checkpoint/revision 是否完全对应，仍需核对。源码存在是阅读事实，尚不能证明某个工作镜像已启用或支持这条路径。</p>
 <p>本周只记录实际 <code>config.json</code> 的 <code>architectures</code> 和相关层类型。第 15 周建立注册映射，第 37 周比较工作模型，第 39–46 周深入长上下文、混合状态、稀疏与投机。这个安排让你先掌握分析工具，再把工具带入复杂架构。</p>
@@ -241,7 +241,7 @@ engine_core_outputs = self.scheduler.update_from_output(
 npu-smi info
 cat /usr/local/Ascend/ascend-toolkit/latest/version.cfg</code></pre>
 <p>CANN 的安装路径可能随镜像变化；文件不存在时读取实际 toolkit 路径或安装清单。NVIDIA 用 <code>nvidia-smi</code> 记录设备和驱动，必要时用 <code>nvcc --version</code> 记录安装的 toolkit。<code>nvidia-smi</code> 的 CUDA Version 表示驱动支持的版本，不能用它替代 PyTorch 运行时或镜像内 toolkit 的安装版本。参见<a href="https://docs.nvidia.com/deploy/nvidia-smi/index.html">NVIDIA 官方说明</a>。</p>
-<div class="box boundary"><div class="label">阅读版本与运行版本</div><p>本地源码快照不含 .git，精确 commit 尚未确认。Ascend 主线的 <a href="../../vllm-ascend-main-1013/.github/vllm-main-verified.commit">vllm-main-verified.commit</a> 是插件指定的配套目标，不能据此证明本地 vLLM 快照就是该 commit。阅读定位与运行日志必须分别记录，版本差异本身也是适配证据。</p></div>
+<div class="box boundary"><div class="label">阅读版本与运行版本</div><p>当前本地阅读仓库已核对 Git commit 与所选文件指纹，见 <a href="../records/stage-a-source-snapshot.json">阶段 A 源码记录</a>；原始指纹单独保留。Ascend 主线的 <a href="../../vllm-ascend/.github/vllm-main-verified.commit">vllm-main-verified.commit</a> 是插件指定的配套目标，当前 vLLM 阅读提交与该配套目标不同，不能默认共同运行。阅读定位与运行日志必须分别记录，版本差异本身也是适配证据。</p></div>
 
 <h3>实验 C　四组受控的离线基线</h3>
 <p>选择已有的本地小型 Dense checkpoint，建议镜像已支持的 Qwen3-0.6B；若换模型，记录理由及配置。<a href="../labs/lesson01_baseline.py">基线脚本</a>使用公开 LLM 接口，在配套镜像里验证兼容性。它不自动下载模型，不能把本课小模型参数直接套到大型生产服务。</p>

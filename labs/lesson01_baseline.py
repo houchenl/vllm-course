@@ -38,6 +38,7 @@ def main() -> None:
     parser.add_argument("--repeats", type=positive_int, default=3)
     parser.add_argument("--max-model-len", type=positive_int, default=2048)
     parser.add_argument("--memory-utilization", type=float, default=0.5)
+    parser.add_argument("--tensor-parallel-size", type=positive_int, default=1)
     parser.add_argument("--model-revision", default="unrecorded")
     parser.add_argument("--image-id", default="unrecorded")
     args = parser.parse_args()
@@ -59,7 +60,7 @@ def main() -> None:
     config = {
         "model": str(model_path),
         "dtype": "bfloat16",
-        "tensor_parallel_size": 1,
+        "tensor_parallel_size": args.tensor_parallel_size,
         "max_model_len": args.max_model_len,
         "max_num_seqs": max(args.batch_sizes),
         "gpu_memory_utilization": args.memory_utilization,
@@ -110,6 +111,8 @@ def main() -> None:
                     "batch_requests_per_second": batch_size / elapsed,
                     "actual_input_counts": input_counts,
                     "actual_output_counts": output_counts,
+                    "input_token_ids": prompt_ids,
+                    "output_token_ids": [item.outputs[0].token_ids for item in outputs],
                 }
                 rows.append(row)
                 case_rows.append(row)

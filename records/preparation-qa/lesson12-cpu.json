@@ -1,0 +1,75 @@
+{
+  "kind": "CPU algebra verification",
+  "torch": "2.14.1",
+  "seed": 17,
+  "dtype": "float32",
+  "rtol": 2e-05,
+  "atol": 2e-05,
+  "rows": [
+    {
+      "tokens": 1,
+      "hidden": 8,
+      "intermediate": 12,
+      "tp": 2,
+      "local_w1_shape": [
+        8,
+        6
+      ],
+      "local_w2_shape": [
+        6,
+        8
+      ],
+      "partial_shape": [
+        1,
+        8
+      ],
+      "max_abs_error": 4.76837158203125e-07,
+      "payload_bytes": 32
+    },
+    {
+      "tokens": 7,
+      "hidden": 8,
+      "intermediate": 12,
+      "tp": 2,
+      "local_w1_shape": [
+        8,
+        6
+      ],
+      "local_w2_shape": [
+        6,
+        8
+      ],
+      "partial_shape": [
+        7,
+        8
+      ],
+      "max_abs_error": 9.5367431640625e-07,
+      "payload_bytes": 224
+    },
+    {
+      "tokens": 3,
+      "hidden": 12,
+      "intermediate": 24,
+      "tp": 4,
+      "local_w1_shape": [
+        12,
+        6
+      ],
+      "local_w2_shape": [
+        6,
+        12
+      ],
+      "partial_shape": [
+        3,
+        12
+      ],
+      "max_abs_error": 3.814697265625e-06,
+      "payload_bytes": 144
+    }
+  ],
+  "not_measured": [
+    "actual collective traffic",
+    "GPU/NPU TP performance",
+    "full model quality"
+  ]
+}

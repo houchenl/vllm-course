@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import html
 import base64
+import json
 import mimetypes
 import os
 from pathlib import Path
@@ -16,6 +17,7 @@ from urllib.parse import urlsplit
 ROOT = Path(__file__).resolve().parents[1]
 CSS = (ROOT / "assets/textbook.css").read_text(encoding="utf-8")
 BOOK_JS = (ROOT / "assets/book.js").read_text(encoding="utf-8")
+LESSONS = json.loads((ROOT / "records/stage-a-lessons.json").read_text(encoding="utf-8"))
 ROUTES = {
     (ROOT / "syllabus.md").resolve(): ROOT / "index.html",
     (ROOT / "README.md").resolve(): ROOT / "index.html",
@@ -26,6 +28,11 @@ ROUTES = {
     (ROOT / "records/lesson01-report-template.md").resolve(): ROOT / "records/lesson01-report-template.html",
     (ROOT / "lessons/01-inference-lifecycle.md").resolve(): ROOT / "lessons/01-inference-lifecycle.html",
 }
+for lesson in LESSONS:
+    slug = lesson["slug"]
+    ROUTES[(ROOT / "lessons" / (slug + ".md")).resolve()] = ROOT / "lessons" / (slug + ".html")
+    week = lesson["week"]
+    ROUTES[(ROOT / "records" / f"lesson{week}-report-template.md").resolve()] = ROOT / "records" / f"lesson{week}-report-template.html"
 
 
 def link_target(value: str, source: Path, output: Path) -> str:
@@ -142,7 +149,7 @@ def markdown(text: str, source: Path, output: Path, prefix: str, skip_title: boo
 
 
 def header(title: str, subtitle: str, label: str = "课程资料") -> str:
-    return f'<header class="chapter-head" id="top"><p class="eyebrow">VLLM &amp; AI INFRA · {html.escape(label)}</p><h1>{html.escape(title)}</h1><p class="lead">{subtitle}</p><div class="meta">更新：2026-10-13 · HTML 教材版 · 离线阅读 / A4 打印</div></header>'
+    return f'<header class="chapter-head" id="top"><p class="eyebrow">VLLM &amp; AI INFRA · {html.escape(label)}</p><h1>{html.escape(title)}</h1><p class="lead">{subtitle}</p><div class="meta">更新：2026-10-14 · HTML 教材版 · 离线阅读 / A4 打印</div></header>'
 
 
 def embed_images(body: str, output: Path) -> str:
@@ -168,6 +175,17 @@ def embed_images(body: str, output: Path) -> str:
 
 def page(output: Path, title: str, body: str, scripts: str = "", toc: list[tuple[str, str]] | None = None) -> None:
     body = embed_images(body, output)
+    if output.parent == ROOT / "lessons":
+        position = next((i for i, lesson in enumerate(LESSONS) if lesson["slug"] == output.stem), None)
+        if position is not None:
+            adjacent = []
+            if position > 0:
+                lesson = LESSONS[position - 1]
+                adjacent.append(f'<a href="{lesson["slug"]}.html">← 上一课：{html.escape(lesson["title"])}</a>')
+            if position + 1 < len(LESSONS):
+                lesson = LESSONS[position + 1]
+                adjacent.append(f'<a href="{lesson["slug"]}.html">下一课：{html.escape(lesson["title"])} →</a>')
+            body += '<nav class="lesson-navigation" aria-label="相邻课程">' + "<br>".join(adjacent) + "</nav>"
     home = Path(os.path.relpath(ROOT / "index.html", output.parent)).as_posix()
     if toc is None:
         toc = [(identifier, html.unescape(re.sub(r"<[^>]+>", "", label))) for identifier, label in re.findall(r'<h2 id="([^"]+)">(.*?)</h2>', body, re.S)]
@@ -209,14 +227,14 @@ def build_index() -> None:
     if len(phases) != 9 or [row[0] for row in weeks] != [f"{week:02}" for week in range(1, 59)]:
         raise ValueError("Expected nine phases and exactly 58 ordered weeks")
     body = header("vLLM 与 AI Infra", "从请求执行主干，走向模型适配、算子分析和跨硬件推理调优。", "课程入口与分阶段课表")
-    body += '<div class="box"><div class="label">从这里开始</div><p><a class="lesson-ready" href="lessons/01-inference-lifecycle.html">第 1 课：一次生成请求如何运行 →</a></p><p>第一课已按教材方式编写，含公式推导、交互状态图、容量计算器、源码导读与实验。后续讲义依学习反馈逐课准备。</p></div>'
+    body += '<div class="box"><div class="label">阶段 A · 14 课已准备</div><p><a class="lesson-ready" href="lessons/01-inference-lifecycle.html">从第 1 课开始：一次生成请求如何运行 →</a></p><p>第 1–14 课均有独立讲义、例题、源码导读、实验与报告模板。<a href="#phase-A">查看阶段 A 全部课程</a>。讲义准备、硬件实测与学员验收分别记录；后续阶段按学习反馈推进。</p></div>'
     intro = text.split("**阶段安排**")[0]
     body += markdown(intro, source, output, "intro")
     body += '<section id="roadmap"><h2>分阶段路线 · 58 周 / 290 小时</h2><div class="phase-strip">'
     for letter, budget, topics, assessment in phases:
         body += f'<div class="phase-card"><span class="tag">阶段 {letter} · {html.escape(budget)}</span><h3><a href="#phase-{letter}">{html.escape(topics)}</a></h3><p>{html.escape(assessment)}</p></div>'
     body += '</div><p class="small">每 4 周复盘；第 14、20、26、32、38、44、50、54、58 周验收。第 59–60 周为可选机动。工作案例可替换相同技能目标的实验。</p></section>'
-    body += '<section id="weekly"><h2>逐周课表</h2><p>源码代码组对应<a href="source-map.html">源码地图</a>。每课再选出 3–5 个核心文件或符号；代码组不等于整组必读。当前仅第 1 课已编写，其他条目为后续学习安排。</p>'
+    body += '<section id="weekly"><h2>逐周课表</h2><p>源码代码组对应<a href="source-map.html">源码地图</a>。每课限定 3–5 个核心文件或符号；代码组不等于整组必读。阶段 A 第 1–14 课已编写，阶段 B–I 仍为后续学习安排。</p>'
     for phase in phases:
         letter, budget, topics, assessment = phase
         span = re.match(r"(\d+)–(\d+)", budget)
@@ -227,13 +245,18 @@ def build_index() -> None:
         body += '<div class="table-scroll"><table><thead><tr><th scope="col">周</th><th scope="col">主要问题与知识</th><th scope="col">源码组</th><th scope="col">主要产物</th></tr></thead><tbody>'
         for row in weeks[start - 1:end]:
             week, topics, groups, product = row
-            cell = '<a href="lessons/01-inference-lifecycle.html">01<br>已编写</a>' if week == "01" else week
-            body += f'<tr data-week="{week}"><td class="nowrap">{cell}</td><td>{inline(topics, source, output)}</td><td>{inline(groups, source, output)}</td><td>{inline(product, source, output)}</td></tr>'
+            ready = next((lesson for lesson in LESSONS if lesson["week"] == week), None)
+            cell = f'<a href="lessons/{ready["slug"]}.html">{week}<br>已编写</a>' if ready else week
+            if ready:
+                topics = f'<a href="lessons/{ready["slug"]}.html">{html.escape(ready["title"])}</a><br>' + inline(topics, source, output)
+            else:
+                topics = inline(topics, source, output)
+            body += f'<tr data-week="{week}"><td class="nowrap">{cell}</td><td>{topics}</td><td>{inline(groups, source, output)}</td><td>{inline(product, source, output)}</td></tr>'
         body += '</tbody></table></div>'
     body += '</section>'
     tail = "**实验范围与前置条件**" + text.split("**实验范围与前置条件**", 1)[1]
     body += markdown(tail, source, output, "reference", skip_title=False)
-    body += '<section id="documents"><h2>课程资料与记录</h2><ul><li><a href="rules.html">已确认课程规则</a> · <a href="editorial-guide.html">HTML 教材编写规范</a></li><li><a href="source-map.html">源码地图</a> · <a href="records/source-snapshot.json">教学源码指纹</a></li><li><a href="records/progress.html">学习进度</a> · <a href="records/lesson01-report-template.html">第一课报告模板</a></li></ul><p>当前硬件实验未执行，第一课尚未验收。讲义准备状态与学员掌握程度分别记录。</p></section>'
+    body += '<section id="documents"><h2>课程资料与记录</h2><ul><li><a href="rules.html">已确认课程规则</a> · <a href="editorial-guide.html">HTML 教材编写规范</a></li><li><a href="source-map.html">源码地图</a> · <a href="records/stage-a-source-snapshot.json">阶段 A 源码记录</a> · <a href="records/source-snapshot.json">原始教学指纹</a></li><li><a href="records/progress.html">学习进度</a> · <a href="records/lesson14-report-template.html">阶段 A 验收模板</a></li><li><a href="records/stage-a-illustrations.json">阶段 A 插图提示词与核对记录</a></li></ul><p>阶段 A 的硬件实验和学员验收尚未完成，详见各课报告。课程准备检查只覆盖讲义、构建与本地可执行练习。</p></section>'
     toc = [("top", "课程与工作背景"), ("roadmap", "分阶段路线"), ("weekly", "逐周课表")]
     toc += [("phase-" + row[0], "阶段 " + row[0] + " · 第 " + row[1].split(" / ")[0] + " 周") for row in phases]
     toc += [("documents", "课程资料与记录")]
@@ -255,6 +278,13 @@ def build_documents() -> None:
             body += '<p class="small">填写或更新请使用配套 <a href="' + source.name + '">Markdown 记录文件</a>；此页用于阅读与打印。</p>'
         body += markdown(source.read_text(encoding="utf-8"), source, output, prefix)
         page(output, title, body)
+    for lesson in LESSONS[1:]:
+        source = ROOT / "records" / f'lesson{lesson["week"]}-report-template.md'
+        output = ROUTES[source.resolve()]
+        body = header(f'第 {lesson["week"]} 课报告模板', lesson["title"], "学习与实验记录")
+        body += f'<p class="small">使用 <a href="{source.name}">Markdown 编写源</a>填写；<a href="../lessons/{lesson["slug"]}.html">返回本课讲义</a>。</p>'
+        body += markdown(source.read_text(encoding="utf-8"), source, output, "report")
+        page(output, f'第 {lesson["week"]} 课报告模板', body)
 
 
 def build_template() -> None:
@@ -277,9 +307,10 @@ def build_template() -> None:
 
 
 def main() -> None:
-    fragment = (ROOT / "materials/01-inference-lifecycle.body.html").read_text(encoding="utf-8")
-    script = (ROOT / "assets/lesson01.js").read_text(encoding="utf-8")
-    page(ROOT / "lessons/01-inference-lifecycle.html", "第 1 课 · 一次生成请求如何运行", fragment, scripts=script)
+    for lesson in LESSONS:
+        fragment = (ROOT / "materials" / (lesson["slug"] + ".body.html")).read_text(encoding="utf-8")
+        script = (ROOT / "assets" / ("lesson01.js" if lesson["week"] == "01" else "stage-a.js")).read_text(encoding="utf-8")
+        page(ROOT / "lessons" / (lesson["slug"] + ".html"), f'第 {lesson["week"]} 课 · {lesson["title"]}', fragment, scripts=script)
     build_index()
     build_documents()
     build_template()

@@ -111,4 +111,4 @@ H20 与 910C 为主要实测平台，910B 用于补充迁移与拓扑对照。�
 - [Context Parallel](https://docs.vllm.ai/en/latest/serving/context_parallel_deployment/)、[Hybrid KV cache](https://docs.vllm.ai/en/latest/design/hybrid_kv_cache_manager/)、[投机解码](https://docs.vllm.ai/en/latest/features/speculative_decoding/)、[PD 分离](https://docs.vllm.ai/en/latest/features/disagg_prefill/)、[KV 卸载](https://docs.vllm.ai/en/latest/features/kv_offloading_usage/)。
 - [vLLM-Omni](https://docs.vllm.ai/projects/vllm-omni/en/latest/)。
 
-各阶段详细讲义以 HTML 教材格式逐课准备，结合最近的自测、报告和环境事实收缩必读范围。当前可直接开始的是[第一课](lessons/01-inference-lifecycle.html)。正式[网页课表](index.html)同时提供阶段导航与 58 周安排。
+各阶段详细讲义以 HTML 教材格式逐课准备，结合最近的自测、报告和环境事实收缩必读范围。阶段 A 的第 1–14 课已分别准备，按课表入口阅读；当前建议从[第一课](lessons/01-inference-lifecycle.html)开始。后续阶段尚未编写。正式[网页课表](index.html)同时提供阶段导航与 58 周安排。

@@ -1,0 +1,414 @@
+[
+  {
+    "week": "01",
+    "slug": "01-inference-lifecycle",
+    "title": "一次生成请求如何运行",
+    "deliverable": "第一课报告：执行链草图、容量计算、四组离线基线",
+    "sources": []
+  },
+  {
+    "week": "02",
+    "slug": "02-tensor-layout",
+    "title": "张量布局与异步执行：计算为何发生复制或等待",
+    "sources": [
+      {
+        "path": "vllm/vllm/v1/worker/gpu_model_runner.py",
+        "symbol": "GPUModelRunner._prepare_inputs"
+      },
+      {
+        "path": "vllm/vllm/model_executor/layers/linear.py",
+        "symbol": "RowParallelLinear.forward"
+      },
+      {
+        "path": "vllm-ascend/vllm_ascend/ops/layernorm.py",
+        "symbol": "Ascend layernorm"
+      }
+    ],
+    "deliverable": "布局/同步实验报告，包含 shape、stride、存储关系与两种时间",
+    "goal": "用存储地址解释一次布局变化，并设计同步正确的计时",
+    "questions": [
+      "写出例题转置前后的 shape、stride 与 [2,1] 的地址。",
+      "两个 64 MiB 的视图必然占 128 MiB 吗？",
+      "怎样计时才能包含设备完成？",
+      "reshape 与 view 有何差别？",
+      "从源码找出一个可能触发 contiguous 或 CPU→设备搬运的地点，并解释影响。"
+    ]
+  },
+  {
+    "week": "03",
+    "slug": "03-hardware-roofline",
+    "title": "算力、带宽与容量：用 Roofline 提出瓶颈假设",
+    "sources": [
+      {
+        "path": "vllm/vllm/model_executor/layers/linear.py",
+        "symbol": "LinearBase / RowParallelLinear"
+      },
+      {
+        "path": "vllm/vllm/v1/worker/gpu_worker.py",
+        "symbol": "Worker.determine_available_memory"
+      },
+      {
+        "path": "vllm/vllm/v1/kv_cache_interface.py",
+        "symbol": "KVCacheSpec"
+      }
+    ],
+    "deliverable": "真实设备资源表及一个算术强度估算",
+    "goal": "区分容量约束和性能约束，用算术强度形成可检验假设",
+    "questions": [
+      "区分容量、带宽和算力的单位。",
+      "推导例题 F、D、I，并指出 D 的前提。",
+      "为何 t≥max 两项不是预测实际时长？",
+      "两个硬件标称算力不同，模型吞吐就按比例变化吗？",
+      "一个带宽瓶颈假设需要什么反证？"
+    ]
+  },
+  {
+    "week": "04",
+    "slug": "04-online-measurement",
+    "title": "在线测量：负载、时间边界与公平比较",
+    "sources": [
+      {
+        "path": "vllm/vllm/benchmarks/serve.py",
+        "symbol": "add_cli_args / benchmark"
+      },
+      {
+        "path": "vllm/vllm/benchmarks/lib/endpoint_request_func.py",
+        "symbol": "流式请求适配器"
+      },
+      {
+        "path": "vllm/vllm/v1/metrics/stats.py",
+        "symbol": "IterationStats"
+      },
+      {
+        "path": "vllm/vllm/benchmarks/datasets/datasets.py",
+        "symbol": "RandomDataset"
+      }
+    ],
+    "deliverable": "小模型在线基线、测量口径与第 4 周节奏校准",
+    "goal": "建立明确到达率、并发和观察位置的在线基线",
+    "questions": [
+      "为什么 TTFT 不能直接代表 Prefill kernel 时间？",
+      "计算例题中平均系统请求数。",
+      "如何解释并发上限与到达率同时限制？",
+      "每轮 100 个请求的 P99 能说明什么？",
+      "设计公平 A/B 需要固定哪些项？"
+    ]
+  },
+  {
+    "week": "05",
+    "slug": "05-process-ownership",
+    "title": "进程与状态归属：请求怎样跨越客户端、引擎和 Worker",
+    "sources": [
+      {
+        "path": "vllm/vllm/v1/engine/core_client.py",
+        "symbol": "EngineCoreClient.make_client / get_output"
+      },
+      {
+        "path": "vllm/vllm/v1/engine/llm_engine.py",
+        "symbol": "LLMEngine.step"
+      },
+      {
+        "path": "vllm/vllm/v1/engine/core.py",
+        "symbol": "EngineCore.step / 执行循环"
+      },
+      {
+        "path": "vllm/vllm/v1/executor/multiproc_executor.py",
+        "symbol": "MultiprocExecutor"
+      }
+    ],
+    "deliverable": "请求和输出的跨进程路径图与对象/状态表",
+    "goal": "标出请求、输出、逻辑块与物理缓存的拥有者及跨进程消息",
+    "questions": [
+      "LLMEngine.step 直接调用 EngineCore.step 吗？",
+      "逻辑块引用和设备缓存分别归谁？",
+      "一次用户输出消息等于一次 forward 吗？",
+      "取消需要检查哪些状态？",
+      "为什么跨进程图不能只画方法调用箭头？"
+    ]
+  },
+  {
+    "week": "06",
+    "slug": "06-scheduler-trace",
+    "title": "调度器的 token 账本：预算、抢占与恢复",
+    "sources": [
+      {
+        "path": "vllm/vllm/v1/core/sched/scheduler.py",
+        "symbol": "Scheduler.schedule"
+      },
+      {
+        "path": "vllm/vllm/v1/core/sched/scheduler.py",
+        "symbol": "_preempt_request / _update_after_schedule / update_from_output"
+      },
+      {
+        "path": "vllm/vllm/v1/request.py",
+        "symbol": "Request / RequestStatus"
+      },
+      {
+        "path": "vllm/vllm/v1/core/sched/output.py",
+        "symbol": "SchedulerOutput"
+      }
+    ],
+    "deliverable": "三个请求的手工调度轨迹及字段对应表",
+    "goal": "从进度差、资源预算和缓存可行性推演一次调度",
+    "questions": [
+      "复算表 6.3 的每轮工作和总工作。",
+      "为什么采样 token 已知但仍待计算？",
+      "列出两个 token 预算有余却不能执行的原因。",
+      "抢占恢复为何可能增加工作？",
+      "调度计划完成是否证明设备已经完成？"
+    ]
+  },
+  {
+    "week": "07",
+    "slug": "07-paged-kv",
+    "title": "分页 KV：块表、槽位与预分配池",
+    "sources": [
+      {
+        "path": "vllm/vllm/v1/core/kv_cache_manager.py",
+        "symbol": "KVCacheManager.allocate_slots / free"
+      },
+      {
+        "path": "vllm/vllm/v1/core/block_pool.py",
+        "symbol": "BlockPool.get_new_blocks / free_blocks"
+      },
+      {
+        "path": "vllm/vllm/v1/kv_cache_interface.py",
+        "symbol": "FullAttentionSpec / KVCacheSpec"
+      },
+      {
+        "path": "vllm/vllm/v1/worker/block_table.py",
+        "symbol": "BlockTable / MultiGroupBlockTable"
+      }
+    ],
+    "deliverable": "分页分配示例、块表及显存容量核对",
+    "goal": "推导块映射与尾块载荷，解释请求释放和设备池保留",
+    "questions": [
+      "求例题位置9的逻辑块、物理块和槽位。",
+      "例题7.2 三个容量分别多少？",
+      "释放请求后占用不下降必然泄漏吗？",
+      "为什么共享时不能直接用Σceil？",
+      "指出实际backend需要核对的两个布局因素。"
+    ]
+  },
+  {
+    "week": "08",
+    "slug": "08-prefix-cache",
+    "title": "前缀复用：哈希、引用计数与命中边界",
+    "sources": [
+      {
+        "path": "vllm/vllm/v1/core/kv_cache_utils.py",
+        "symbol": "hash_block_tokens / generate_block_hash_extra_keys"
+      },
+      {
+        "path": "vllm/vllm/v1/core/kv_cache_manager.py",
+        "symbol": "get_computed_blocks"
+      },
+      {
+        "path": "vllm/vllm/v1/core/block_pool.py",
+        "symbol": "cache_full_blocks / touch / free_blocks"
+      }
+    ],
+    "deliverable": "冷/热前缀结果、缓存命中证据与收益解释",
+    "goal": "解释完整前缀命中链，设计不会混入编译预热的冷热对照",
+    "questions": [
+      "相同后缀token能独立证明状态相同吗？",
+      "b=4、prompt=12全部缓存，普通路径最多完整命中多少？",
+      "两请求共享，先后结束时引用变化？",
+      "为何第一轮慢、第二轮快不足以归因APC？",
+      "缓存命中会消除Decode对历史读取吗？"
+    ]
+  },
+  {
+    "week": "09",
+    "slug": "09-chunked-prefill",
+    "title": "Chunked Prefill 与异步调度：长短请求怎样共享执行",
+    "sources": [
+      {
+        "path": "vllm/vllm/config/scheduler.py",
+        "symbol": "SchedulerConfig"
+      },
+      {
+        "path": "vllm/vllm/v1/core/sched/scheduler.py",
+        "symbol": "Scheduler.schedule"
+      },
+      {
+        "path": "vllm/vllm/v1/engine/core.py",
+        "symbol": "step / step_with_batch_queue"
+      },
+      {
+        "path": "vllm/vllm/v1/core/sched/async_scheduler.py",
+        "symbol": "AsyncScheduler"
+      }
+    ],
+    "deliverable": "长短请求混跑的预算对照与调度解释",
+    "goal": "解释混合批次与异步依赖，比较一个 token 预算参数",
+    "questions": [
+      "例题两种预算需要多少轮完成长prompt？",
+      "部分Prefill完成后必然产生用户token吗？",
+      "异步调度消除了自回归依赖吗？",
+      "若同步21ms中CPU只有1ms，理想节省上限？",
+      "怎样才能归因token预算的变化？"
+    ]
+  },
+  {
+    "week": "10",
+    "slug": "10-runner-inputs",
+    "title": "ModelRunner：把执行计划变成张量与 Attention metadata",
+    "sources": [
+      {
+        "path": "vllm/vllm/v1/worker/gpu_worker.py",
+        "symbol": "Worker._make_model_runner"
+      },
+      {
+        "path": "vllm/vllm/v1/core/sched/output.py",
+        "symbol": "SchedulerOutput"
+      },
+      {
+        "path": "vllm/vllm/v1/worker/gpu_model_runner.py",
+        "symbol": "_update_states / _prepare_inputs / execute_model"
+      },
+      {
+        "path": "vllm/vllm/v1/attention/backend.py",
+        "symbol": "CommonAttentionMetadata"
+      }
+    ],
+    "deliverable": "SchedulerOutput到模型输入的张量/状态表",
+    "goal": "从逐请求token数推导输入张量、位置、块表和采样索引",
+    "questions": [
+      "复算q=[1,3,2]的段边界与positions。",
+      "position与slot有什么区别？",
+      "slot_mapping与block_table分别做什么？",
+      "新请求与已缓存请求为什么不同发送？",
+      "seq_lens上界能代替精确长度吗？"
+    ]
+  },
+  {
+    "week": "11",
+    "slug": "11-attention-backends",
+    "title": "Attention 的三层问题：架构、IO与backend",
+    "sources": [
+      {
+        "path": "vllm/vllm/v1/attention/selector.py",
+        "symbol": "get_attn_backend / _cached_get_attn_backend"
+      },
+      {
+        "path": "vllm/vllm/platforms/cuda.py",
+        "symbol": "CudaPlatform.get_attn_backend_cls"
+      },
+      {
+        "path": "vllm/vllm/v1/attention/backends/flash_attn.py",
+        "symbol": "FlashAttentionBackend / metadata builder"
+      },
+      {
+        "path": "vllm/vllm/model_executor/models/deepseek_v2.py",
+        "symbol": "MLA相关模块"
+      }
+    ],
+    "deliverable": "实际backend证据、Attention成本图和一次质量核对",
+    "goal": "区分缓存架构与IO优化，并追踪实际backend分派",
+    "questions": [
+      "Hq32/Hkv8的KV载荷相对MHA多少？",
+      "单head4096²、2byte分数矩阵多大？",
+      "两块softmax输出可直接平均吗？",
+      "FlashAttention与Paged KV分别解决什么？",
+      "如何证明实际backend？"
+    ]
+  },
+  {
+    "week": "12",
+    "slug": "12-tensor-parallel",
+    "title": "张量并行：线性层、heads与collective怎样协作",
+    "sources": [
+      {
+        "path": "vllm/vllm/model_executor/layers/linear.py",
+        "symbol": "ColumnParallelLinear.forward / RowParallelLinear.forward"
+      },
+      {
+        "path": "vllm/vllm/model_executor/layers/linear.py",
+        "symbol": "QKVParallelLinear"
+      },
+      {
+        "path": "vllm/vllm/distributed/parallel_state.py",
+        "symbol": "GroupCoordinator / tensor_model_parallel_all_reduce"
+      },
+      {
+        "path": "vllm/vllm/model_executor/models/qwen3.py",
+        "symbol": "Qwen3Attention / Qwen3MLP"
+      }
+    ],
+    "deliverable": "单卡与TP=2的形状、通信及正确性对照",
+    "goal": "推导column/row parallel形状、消息量和正确性检查",
+    "questions": [
+      "TP2例题中两rank中间激活形状？",
+      "每rankpartial output为什么同shape却不能任选一个？",
+      "64KiB payload与ring每rank流量有什么区别？",
+      "KV一定按TP等比分片吗？",
+      "怎样评价TP2比TP1慢？"
+    ]
+  },
+  {
+    "week": "13",
+    "slug": "13-tp-scaling",
+    "title": "单机扩展：拓扑、batch与通信为何改变收益",
+    "sources": [
+      {
+        "path": "vllm/vllm/distributed/parallel_state.py",
+        "symbol": "GroupCoordinator"
+      },
+      {
+        "path": "vllm/vllm/distributed/device_communicators/cuda_communicator.py",
+        "symbol": "CudaCommunicator"
+      },
+      {
+        "path": "vllm/vllm/v1/executor/multiproc_executor.py",
+        "symbol": "MultiprocExecutor"
+      },
+      {
+        "path": "vllm/vllm/benchmarks/serve.py",
+        "symbol": "benchmark"
+      }
+    ],
+    "deliverable": "2–3个TP配置的吞吐/延迟曲线与选择依据",
+    "goal": "把同负载扩展与同资源方案分开，定位一次通信或计算限制",
+    "questions": [
+      "例题S2和E4分别多少？",
+      "单卡无法装下，如何报告加速？",
+      "collective区间长有哪些可能原因？",
+      "同服务TP扩展与同卡数多副本比较区别？",
+      "为什么profile时长不能直接作基线？"
+    ]
+  },
+  {
+    "week": "14",
+    "slug": "14-stage-a-checkpoint",
+    "title": "阶段 A 验收：解释一条请求，诊断一个真实限制",
+    "sources": [
+      {
+        "path": "vllm/vllm/v1/engine/core.py",
+        "symbol": "EngineCore.step"
+      },
+      {
+        "path": "vllm/vllm/v1/core/sched/scheduler.py",
+        "symbol": "Scheduler.schedule / update_from_output"
+      },
+      {
+        "path": "vllm/vllm/v1/core/kv_cache_manager.py",
+        "symbol": "KVCacheManager"
+      },
+      {
+        "path": "vllm/vllm/benchmarks/serve.py",
+        "symbol": "测量与指标"
+      }
+    ],
+    "deliverable": "主干报告：执行图、状态表、容量、基线、干预与复现",
+    "goal": "独立提出并验证一个性能假设，说明适用范围与未解决问题",
+    "questions": [
+      "不用术语清单，解释一次请求从输入到释放的执行链。",
+      "同时给出逻辑KV、分配槽位与池大小，能直接相加吗？",
+      "例题A/B有效吞吐分别多少，如何选择？",
+      "写一个可被下一次测量证伪的假设。",
+      "真实结果与预测不符，如何报告？",
+      "标准GQA公式不能概括工作模型的原因？"
+    ]
+  }
+]

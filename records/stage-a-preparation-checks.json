@@ -1,0 +1,87 @@
+{
+  "date": "2026-10-14",
+  "status": "passed for stated preparation scope",
+  "scope": "course-author preparation only; not learner acceptance, installed vLLM API verification, or GPU/NPU performance validation",
+  "static_html": {
+    "pages": 34,
+    "stage_a_lessons": 14,
+    "local_links_and_anchors": 667,
+    "embedded_images": 14,
+    "mathml_equations": 34,
+    "errors": []
+  },
+  "browser": {
+    "report": "records/preparation-qa/browser.json",
+    "engine": "Google Chrome via Playwright",
+    "pages": 34,
+    "viewports": [
+      [
+        1440,
+        1000
+      ],
+      [
+        390,
+        844
+      ]
+    ],
+    "errors": [],
+    "checks": [
+      "58 weeks and 14 ready lessons",
+      "no unexpected HTTP dependencies",
+      "all source illustrations decoded",
+      "no whole-document horizontal overflow",
+      "four calculators: initial values, invalid input and updated values",
+      "figure dialog and original-size toggle",
+      "beforeprint answer expansion and afterprint restoration",
+      "lesson 14 A4 PDF generated"
+    ],
+    "local_visual_review": [
+      ".browser-check/stage-a-index-desktop.png",
+      ".browser-check/lesson08-mobile.png",
+      ".browser-check/lesson03-model.png"
+    ]
+  },
+  "python": {
+    "compileall_labs_tools": "passed",
+    "standard_library_tests": {
+      "command": ".venv/bin/python tools/check_stage_a_labs.py",
+      "tests": 8,
+      "result": "passed",
+      "stream_tests_use_local_mock_responses": true,
+      "plot_tests_use_temporary_fixtures_only": true
+    },
+    "benchmark_dry_plan": {
+      "lesson": 4,
+      "jobs": 12,
+      "result": "saved, not executed"
+    }
+  },
+  "cpu_checks": {
+    "torch": "2.14.1",
+    "python": "3.12",
+    "device": "cpu",
+    "lesson02": "records/preparation-qa/lesson02-cpu.json",
+    "lesson11": {
+      "file": "records/preparation-qa/lesson11-cpu.json",
+      "max_abs_tiled_error": 3.8743019104003906e-07,
+      "rtol": 2e-05,
+      "atol": 2e-05
+    },
+    "lesson12": {
+      "file": "records/preparation-qa/lesson12-cpu.json",
+      "max_abs_error": 3.814697265625e-06,
+      "rtol": 2e-05,
+      "atol": 2e-05
+    }
+  },
+  "source_reading_record": "records/stage-a-source-snapshot.json",
+  "illustrations_record": "records/stage-a-illustrations.json",
+  "not_executed": [
+    "remote vLLM service",
+    "H20/910C/910B/RTX PRO 5000 hardware performance",
+    "prefix cold/hot experiment",
+    "mixed streaming workload",
+    "real distributed TP scaling",
+    "learner acceptance"
+  ]
+}

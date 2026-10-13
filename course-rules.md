@@ -4,7 +4,7 @@
 
 学员基础：学过约 12 小时 PyTorch 入门并做过简单项目；熟悉 Transformer 原理；了解通信原语和并行方式；CUDA、Triton、Ascend C 与硬件知识需要从基础补齐。每周投入 5 小时。工作覆盖 DeepSeek、Qwen、GLM、Kimi、MiniMax 系列，包含 Dense、MoE、多模态理解及视觉生成。2026-10-13 补充：常用模型为 DeepSeek-V4.1-Flash、GLM-5.3-Flash；Ascend 以 910C 为主、910B 为补充。主要硬件为 H20、RTX PRO 5000、910B、910C；已描述资源包括双机 H20 和两类双机 910B，910C 的具体资源、各环境每节点卡数、SKU 和网络拓扑将在实验准备时核实。用户报告 vLLM 0.31.0、vLLM-Ascend 0.30.0rc1；CUDA/CANN 及两个镜像内完整版本分别实测记录。
 
-已检查的源码依据：`vllm-main-261013` 中的 V1 EngineCore、Scheduler、KVCacheManager、GPU Worker、模型实现、设计文档，以及当前工作区 `vllm-ascend-main-1013` 的平台插件和版本策略。尚未确认主线快照的精确 commit；目录名不作为版本证明。目录中同时存在传统 GPUModelRunner 与实验性的 Model Runner V2，必须按运行配置区分实际执行路径。Ascend 主线版本策略要求配套 `.github/vllm-main-verified.commit` 指定的 vLLM commit，目前文件内容为 `8cc9aa5ad350f6f80cf3bebb298d410803ff75a9`；尚未确认本地 vLLM 快照与该 commit 相同。
+已检查的源码依据：`vllm` 中的 V1 EngineCore、Scheduler、KVCacheManager、GPU Worker、模型实现、设计文档，以及当前工作区 `vllm-ascend` 的平台插件和版本策略。阶段 A 生成时已核对当前两个 Git 仓库提交和 73 个教学文件指纹，见 records/stage-a-source-snapshot.json；运行镜像版本仍单独记录。目录中同时存在传统 GPUModelRunner 与实验性的 Model Runner V2，必须按运行配置区分实际执行路径。Ascend 主线版本策略要求配套 `.github/vllm-main-verified.commit` 指定的 vLLM commit，目前文件内容为 `8cc9aa5ad350f6f80cf3bebb298d410803ff75a9`；当前 vLLM 阅读提交为 61d9c777bfdef66efbf017c7c363d2bdca5db8ee，与该配套目标不同；不据此推定两仓库可直接共同运行。
 
 **1. 用岗位能力定义目标。**
 
@@ -108,9 +108,9 @@ H20 与 910C 是主要实测平台，910B 为补充。实验按单卡 → 单机
 
 **资料依据（规则的设计仍属于课程建议）**
 
-- V1 进程架构：[本地设计文档](../vllm-main-261013/docs/design/arch_overview.md)；[官方架构说明](https://docs.vllm.ai/en/stable/design/arch_overview/)。
-- Model Runner V2 的实验状态：[本地 README](../vllm-main-261013/vllm/v1/worker/gpu/README.md)。
-- Ascend 配套版本：[本地版本策略](../vllm-ascend-main-1013/docs/source/community/versioning_policy.md)、[本地主线验证 commit](../vllm-ascend-main-1013/.github/vllm-main-verified.commit)；[官方版本策略](https://docs.vllm.ai/projects/ascend/en/main/community/versioning_policy.html)。本地主线配套要求以本地指定 commit 和对应依赖为准。
+- V1 进程架构：[本地设计文档](../vllm/docs/design/arch_overview.md)；[官方架构说明](https://docs.vllm.ai/en/stable/design/arch_overview/)。
+- Model Runner V2 的实验状态：[本地 README](../vllm/vllm/v1/worker/gpu/README.md)。
+- Ascend 配套版本：[本地版本策略](../vllm-ascend/docs/source/community/versioning_policy.md)、[本地主线验证 commit](../vllm-ascend/.github/vllm-main-verified.commit)；[官方版本策略](https://docs.vllm.ai/projects/ascend/en/main/community/versioning_policy.html)。本地主线配套要求以本地指定 commit 和对应依赖为准。
 - 分页缓存：[PagedAttention 原论文](https://arxiv.org/abs/2309.06180)。
 - 专题机制：[投机解码](https://docs.vllm.ai/en/latest/features/speculative_decoding/)、[PD 分离](https://docs.vllm.ai/en/latest/features/disagg_prefill/)、[Context Parallel](https://docs.vllm.ai/en/latest/serving/context_parallel_deployment/)、[Hybrid KV cache](https://docs.vllm.ai/en/latest/design/hybrid_kv_cache_manager/)、[KV 卸载](https://docs.vllm.ai/en/latest/features/kv_offloading_usage/)。运行能力以配套版本为准，不能从 latest 文档推定本地支持。
 - 内核基础：[CUDA 编程模型](https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html)、[Triton 官方教程](https://triton-lang.org/main/getting-started/tutorials/)、[Ascend C 编程范式示例文档](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/82RC1alpha001/opdevg/Ascendcopdevg/atlas_ascendc_10_0016.html)。Ascend C 文档示例说明编程概念，API 和工具使用须对照实验环境的 CANN 版本。
@@ -118,17 +118,17 @@ H20 与 910C 是主要实测平台，910B 为补充。实验按单卡 → 单机
 
 **本地源码入口**
 
-- [架构概览](../vllm-main-261013/docs/design/arch_overview.md)
-- [EngineCore](../vllm-main-261013/vllm/v1/engine/core.py)
-- [Scheduler](../vllm-main-261013/vllm/v1/core/sched/scheduler.py)
-- [KVCacheManager](../vllm-main-261013/vllm/v1/core/kv_cache_manager.py)
-- [GPU Worker](../vllm-main-261013/vllm/v1/worker/gpu_worker.py)
-- [传统 GPUModelRunner](../vllm-main-261013/vllm/v1/worker/gpu_model_runner.py)
-- [Model Runner V2](../vllm-main-261013/vllm/v1/worker/gpu/model_runner.py)
-- [模型注册](../vllm-main-261013/vllm/model_executor/models/registry.py)
-- [默认权重加载](../vllm-main-261013/vllm/model_executor/model_loader/default_loader.py)
-- [Ascend 平台插件](../vllm-ascend-main-1013/vllm_ascend/platform.py)
-- [Ascend 主线版本策略](../vllm-ascend-main-1013/docs/source/community/versioning_policy.md)
-- [Ascend 主线验证 commit](../vllm-ascend-main-1013/.github/vllm-main-verified.commit)
+- [架构概览](../vllm/docs/design/arch_overview.md)
+- [EngineCore](../vllm/vllm/v1/engine/core.py)
+- [Scheduler](../vllm/vllm/v1/core/sched/scheduler.py)
+- [KVCacheManager](../vllm/vllm/v1/core/kv_cache_manager.py)
+- [GPU Worker](../vllm/vllm/v1/worker/gpu_worker.py)
+- [传统 GPUModelRunner](../vllm/vllm/v1/worker/gpu_model_runner.py)
+- [Model Runner V2](../vllm/vllm/v1/worker/gpu/model_runner.py)
+- [模型注册](../vllm/vllm/model_executor/models/registry.py)
+- [默认权重加载](../vllm/vllm/model_executor/model_loader/default_loader.py)
+- [Ascend 平台插件](../vllm-ascend/vllm_ascend/platform.py)
+- [Ascend 主线版本策略](../vllm-ascend/docs/source/community/versioning_policy.md)
+- [Ascend 主线验证 commit](../vllm-ascend/.github/vllm-main-verified.commit)
 
 规则已于 2026-10-13 确认，并按同日补充的工作模型及 Ascend 硬件优先级更新。后续按已确认规则和每四周复盘调整课表。

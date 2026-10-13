@@ -1,0 +1,531 @@
+{
+  "created_client_date": "2026-10-13",
+  "repositories": {
+    "vllm": {
+      "commit": "61d9c777bfdef66efbf017c7c363d2bdca5db8ee",
+      "dirty_status": ""
+    },
+    "vllm-ascend": {
+      "commit": "9df31e4e63333c9dece50e5336c6966062b4e806",
+      "dirty_status": ""
+    }
+  },
+  "scope": "selected teaching files plus Git commit identities; not runtime validation or upstream support claims",
+  "historical_snapshot": "records/source-snapshot.json",
+  "runtime_verified": false,
+  "ascend_required_main_vllm_commit": "8cc9aa5ad350f6f80cf3bebb298d410803ff75a9",
+  "files": [
+    {
+      "path": "vllm-ascend/.github/vllm-main-verified.commit",
+      "sha256": "38033b6cf969c8add7bfe7a569d1f838f92031f037d34971157dd48c315ceb48",
+      "bytes": 41,
+      "historical_sha256": "38033b6cf969c8add7bfe7a569d1f838f92031f037d34971157dd48c315ceb48",
+      "historical_match": true
+    },
+    {
+      "path": "vllm-ascend/docs/source/community/versioning_policy.md",
+      "sha256": "78fa17c7aaa6d5be2c0d70b385baa2998c9af475d15548475c836dc73f65244e",
+      "bytes": 17496,
+      "historical_sha256": "78fa17c7aaa6d5be2c0d70b385baa2998c9af475d15548475c836dc73f65244e",
+      "historical_match": true
+    },
+    {
+      "path": "vllm-ascend/vllm_ascend/attention/dsa_v41.py",
+      "sha256": "0813e6371fdfb63e71d7b6013b45567080ffb81d9b72f746e8940c2a90ac90df",
+      "bytes": 72531,
+      "historical_sha256": "0813e6371fdfb63e71d7b6013b45567080ffb81d9b72f746e8940c2a90ac90df",
+      "historical_match": true
+    },
+    {
+      "path": "vllm-ascend/vllm_ascend/models/glm5next/cache_config.py",
+      "sha256": "00559085edd75a1719254b3f52dedbcd4fb0ce93c511b17c06ab3d975ed2e1e4",
+      "bytes": 18909,
+      "historical_sha256": "00559085edd75a1719254b3f52dedbcd4fb0ce93c511b17c06ab3d975ed2e1e4",
+      "historical_match": true
+    },
+    {
+      "path": "vllm-ascend/vllm_ascend/models/glm5next/kda.py",
+      "sha256": "b2e0dca0ed6f9b686e9e3e4a73ba2a610860d62ece1be271a14627c6cb4a9924",
+      "bytes": 23249,
+      "historical_sha256": "b2e0dca0ed6f9b686e9e3e4a73ba2a610860d62ece1be271a14627c6cb4a9924",
+      "historical_match": true
+    },
+    {
+      "path": "vllm-ascend/vllm_ascend/models/glm5next/model.py",
+      "sha256": "2a9381fa5897578bf4922b4b2bef99635dbc58236cd0f31fe5f93664b7252bbe",
+      "bytes": 43769,
+      "historical_sha256": "2a9381fa5897578bf4922b4b2bef99635dbc58236cd0f31fe5f93664b7252bbe",
+      "historical_match": true
+    },
+    {
+      "path": "vllm-ascend/vllm_ascend/ops/layernorm.py",
+      "sha256": "d2fda42ad99935725c98b9505a8d2e94696d9cdb2906e5cb2f1e37bf21fb27bc",
+      "bytes": 8510,
+      "historical_sha256": "d2fda42ad99935725c98b9505a8d2e94696d9cdb2906e5cb2f1e37bf21fb27bc",
+      "historical_match": true
+    },
+    {
+      "path": "vllm-ascend/vllm_ascend/platform.py",
+      "sha256": "143a61dea07f8df1f694b64aea910cc42e5ef6d5fd7f6634565895bbc4b875a7",
+      "bytes": 90547,
+      "historical_sha256": "04a9c5bc978c29e7e4b9ca3ac5e944aef72b64eac9be78d60de5f837b420d1f3",
+      "historical_match": false
+    },
+    {
+      "path": "vllm-ascend/vllm_ascend/worker/model_runner_v1.py",
+      "sha256": "5ab64dc851bc0bc59d66540fb8567cd8d7f0814c82b5c4ad170339b35dd9d985",
+      "bytes": 324821,
+      "historical_sha256": "5ab64dc851bc0bc59d66540fb8567cd8d7f0814c82b5c4ad170339b35dd9d985",
+      "historical_match": true
+    },
+    {
+      "path": "vllm-ascend/vllm_ascend/worker/v2/model_runner.py",
+      "sha256": "854fa759cf5369366c6e3784379e1cb37ec5b4a16f390df3ed004fa7b3ce057c",
+      "bytes": 66507,
+      "historical_sha256": "854fa759cf5369366c6e3784379e1cb37ec5b4a16f390df3ed004fa7b3ce057c",
+      "historical_match": true
+    },
+    {
+      "path": "vllm-ascend/vllm_ascend/worker/worker.py",
+      "sha256": "ad993f7081a93eb25c942a3a421141c9d4870ae68bdb70a21e73eb086d33c5df",
+      "bytes": 64193,
+      "historical_sha256": "ad993f7081a93eb25c942a3a421141c9d4870ae68bdb70a21e73eb086d33c5df",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/docs/configuration/optimization.md",
+      "sha256": "6464b660e86cf0724dc2042530ac588a23f50aeb6c6ec876c03622d88df35807",
+      "bytes": 24144,
+      "historical_sha256": null,
+      "historical_match": null
+    },
+    {
+      "path": "vllm/docs/design/arch_overview.md",
+      "sha256": "75e2f3d93bd28aaec56da4663536e3f65561c29d5a2940dc9e6cbe29fe95f21e",
+      "bytes": 14727,
+      "historical_sha256": "75e2f3d93bd28aaec56da4663536e3f65561c29d5a2940dc9e6cbe29fe95f21e",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/docs/design/hybrid_kv_cache_manager.md",
+      "sha256": "46668c028e946aba3604f9509ae07ced27353628d836a91427145c502ea5ee22",
+      "bytes": 15620,
+      "historical_sha256": null,
+      "historical_match": null
+    },
+    {
+      "path": "vllm/docs/design/prefix_caching.md",
+      "sha256": "67ee4e2b7bc23d40e9b366e4a9053ae4ecd0925ddef51f412ac5c16b9dc83a61",
+      "bytes": 13916,
+      "historical_sha256": null,
+      "historical_match": null
+    },
+    {
+      "path": "vllm/docs/serving/parallelism_scaling.md",
+      "sha256": "edd3998246b0060e3183bc3e8e782ed38ac780e8cd6b76c7e80d213a8d2ab153",
+      "bytes": 12122,
+      "historical_sha256": null,
+      "historical_match": null
+    },
+    {
+      "path": "vllm/vllm/benchmarks/datasets/datasets.py",
+      "sha256": "6f2239d9d27fe439f255bef3bc8df1f484608fdd31b316fd21c32dd2d3f769f7",
+      "bytes": 176254,
+      "historical_sha256": null,
+      "historical_match": null
+    },
+    {
+      "path": "vllm/vllm/benchmarks/lib/endpoint_request_func.py",
+      "sha256": "f31fae8c573ecc4bf8e31dae03823502e71404333e8111f4b535432758302b29",
+      "bytes": 40969,
+      "historical_sha256": null,
+      "historical_match": null
+    },
+    {
+      "path": "vllm/vllm/benchmarks/serve.py",
+      "sha256": "0686a2f2ebdbfdf3da47d97753b9a78de4f346e51549cc8b3678218d6712924a",
+      "bytes": 91589,
+      "historical_sha256": "0686a2f2ebdbfdf3da47d97753b9a78de4f346e51549cc8b3678218d6712924a",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/config/scheduler.py",
+      "sha256": "2fb86b1572a4925be59f304d13b4f6ec03d496b67a7c4abbb976ecda2232839a",
+      "bytes": 16149,
+      "historical_sha256": null,
+      "historical_match": null
+    },
+    {
+      "path": "vllm/vllm/distributed/device_communicators/cuda_communicator.py",
+      "sha256": "2f5368d6ca1856a7b2b49fc423cc4728483d0c9289f913a7bc7cbe0baa040ec0",
+      "bytes": 43877,
+      "historical_sha256": null,
+      "historical_match": null
+    },
+    {
+      "path": "vllm/vllm/distributed/parallel_state.py",
+      "sha256": "0e47cff9a89717183bdce6403f0454961848247f51306a0f1dfbe3d6e1b93336",
+      "bytes": 102015,
+      "historical_sha256": "0e47cff9a89717183bdce6403f0454961848247f51306a0f1dfbe3d6e1b93336",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/entrypoints/common/offline.py",
+      "sha256": "06730cea23c890662c283f2228bdd51b461f37f63aa867e357e0c1585da04e8c",
+      "bytes": 24522,
+      "historical_sha256": "06730cea23c890662c283f2228bdd51b461f37f63aa867e357e0c1585da04e8c",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/entrypoints/llm.py",
+      "sha256": "283f5ed4d0744aef22a01fefd307565ef60ee172a8ec4805ece0bcd630d9568c",
+      "bytes": 41696,
+      "historical_sha256": "283f5ed4d0744aef22a01fefd307565ef60ee172a8ec4805ece0bcd630d9568c",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/model_executor/layers/attention/sparse_mla_attention.py",
+      "sha256": "4888c208503bc3a9caaa49a3bb1babd9a1d170dc4b3738490b811d4046398462",
+      "bytes": 46984,
+      "historical_sha256": "59b5cc01f45c9a843db53413fcf970acb90d14cef0282115276b055b98d282d2",
+      "historical_match": false
+    },
+    {
+      "path": "vllm/vllm/model_executor/layers/fused_moe/fused_moe.py",
+      "sha256": "21860340e4b409b01666e2ba0f0edae66b0f97b859756b174b573bab895cfaf7",
+      "bytes": 63342,
+      "historical_sha256": "21860340e4b409b01666e2ba0f0edae66b0f97b859756b174b573bab895cfaf7",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/model_executor/layers/layernorm.py",
+      "sha256": "7be031e88921fb21661f3b9ee28b4ccb7746405e0ff32ed5895d75b43d3357ed",
+      "bytes": 14749,
+      "historical_sha256": "7be031e88921fb21661f3b9ee28b4ccb7746405e0ff32ed5895d75b43d3357ed",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/model_executor/layers/linear.py",
+      "sha256": "7a9b90937865fa35d955ffc2017f23d3997bc4fba954e2667870b1b4854a38e0",
+      "bytes": 70659,
+      "historical_sha256": "7a9b90937865fa35d955ffc2017f23d3997bc4fba954e2667870b1b4854a38e0",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/model_executor/layers/quantization/__init__.py",
+      "sha256": "d7656bbd3c34acc5df276cb99c72e96783c343c2751f7650107f035afbe8c295",
+      "bytes": 7025,
+      "historical_sha256": "d7656bbd3c34acc5df276cb99c72e96783c343c2751f7650107f035afbe8c295",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/model_executor/layers/sparse_attn_indexer.py",
+      "sha256": "99f1ebb25a7dd0b31193a9f83f5d696b0798e79c11a1f713815d9a2ab224d2ea",
+      "bytes": 57279,
+      "historical_sha256": "99f1ebb25a7dd0b31193a9f83f5d696b0798e79c11a1f713815d9a2ab224d2ea",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/model_executor/model_loader/default_loader.py",
+      "sha256": "789ba8c641f7d310cfa00d55312e8fc376b0e9ac5f689a0a0a5386f308f4520f",
+      "bytes": 23488,
+      "historical_sha256": "789ba8c641f7d310cfa00d55312e8fc376b0e9ac5f689a0a0a5386f308f4520f",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/model_executor/models/deepseek_v2.py",
+      "sha256": "96f4f755f62caa85869fb884209e7f8869882ddb6efbd40c930778b27bd3e39d",
+      "bytes": 78888,
+      "historical_sha256": "96f4f755f62caa85869fb884209e7f8869882ddb6efbd40c930778b27bd3e39d",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/model_executor/models/glm4_moe.py",
+      "sha256": "6f14e11a573dcf083ae00f7716d222a0e3d24bc38c072fa454aa6d25ddff18ca",
+      "bytes": 22981,
+      "historical_sha256": "6f14e11a573dcf083ae00f7716d222a0e3d24bc38c072fa454aa6d25ddff18ca",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/model_executor/models/kimi_k25.py",
+      "sha256": "4861851742a30901052112e68be878e00d50b4b0fb33f3d0d61f7cbe38c0841a",
+      "bytes": 25755,
+      "historical_sha256": "4861851742a30901052112e68be878e00d50b4b0fb33f3d0d61f7cbe38c0841a",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/model_executor/models/minimax_m2.py",
+      "sha256": "0675f76a2c510576e0d8f673eeec36527495ac3c28fa6c063055aeceacec5984",
+      "bytes": 18226,
+      "historical_sha256": "0675f76a2c510576e0d8f673eeec36527495ac3c28fa6c063055aeceacec5984",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/model_executor/models/qwen3.py",
+      "sha256": "06bee457e1278cecc3d0745f45c44b4711243330e8c2c19d5c732625b67f1374",
+      "bytes": 12972,
+      "historical_sha256": "06bee457e1278cecc3d0745f45c44b4711243330e8c2c19d5c732625b67f1374",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/model_executor/models/qwen3_moe.py",
+      "sha256": "4710723deacd3c00e1fcd5e8b1a70474e6860d18dea9aeda2700c115795f4b40",
+      "bytes": 24303,
+      "historical_sha256": "4710723deacd3c00e1fcd5e8b1a70474e6860d18dea9aeda2700c115795f4b40",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/model_executor/models/qwen3_next.py",
+      "sha256": "09ea2a385259edc9feadc79e304e86a31582b9770f80b8003d2d641782405818",
+      "bytes": 34479,
+      "historical_sha256": "09ea2a385259edc9feadc79e304e86a31582b9770f80b8003d2d641782405818",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/model_executor/models/qwen3_vl.py",
+      "sha256": "cac3013e717c8d6299893a4e18964ea7ec3abbbf7373eed58045fab50da9028b",
+      "bytes": 126535,
+      "historical_sha256": "cac3013e717c8d6299893a4e18964ea7ec3abbbf7373eed58045fab50da9028b",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/model_executor/models/registry.py",
+      "sha256": "e6522ec2917e0b874e7e841478f4faff1c10831a513915a0ea6cfaef5e1ad1ab",
+      "bytes": 65284,
+      "historical_sha256": "e6522ec2917e0b874e7e841478f4faff1c10831a513915a0ea6cfaef5e1ad1ab",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/models/deepseek_v41/__init__.py",
+      "sha256": "6b928f07c6f67f4fd1b599a143cd15a1309a177c877f7f08b29d5fa30db659fe",
+      "bytes": 625,
+      "historical_sha256": "6b928f07c6f67f4fd1b599a143cd15a1309a177c877f7f08b29d5fa30db659fe",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/models/deepseek_v41/attention.py",
+      "sha256": "98f5c1014e87554e01480cfca143f727c7662cc222a60b7c5b63e3bc1091abc6",
+      "bytes": 62961,
+      "historical_sha256": "98f5c1014e87554e01480cfca143f727c7662cc222a60b7c5b63e3bc1091abc6",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/models/deepseek_v41/decoder_replay_layers.py",
+      "sha256": "2fedc0a656a57cde7bc6780904e17484e2a4b9ac7aa7429ea392b1762908d1a8",
+      "bytes": 5787,
+      "historical_sha256": "2fedc0a656a57cde7bc6780904e17484e2a4b9ac7aa7429ea392b1762908d1a8",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/models/deepseek_v41/nvidia/model.py",
+      "sha256": "5fe8b4a758ab586dd24ac218873a2c064cd3d72687b196dec4edf1b5e53f83a3",
+      "bytes": 70436,
+      "historical_sha256": "5fe8b4a758ab586dd24ac218873a2c064cd3d72687b196dec4edf1b5e53f83a3",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/models/deepseek_v41/nvidia/vl_model.py",
+      "sha256": "ff2c16614dc694f0c07a45929def3c76f30cb547f897b57c18c70bb99587171c",
+      "bytes": 13222,
+      "historical_sha256": "ff2c16614dc694f0c07a45929def3c76f30cb547f897b57c18c70bb99587171c",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/models/deepseek_v41/sparse_mla.py",
+      "sha256": "1b87aa3f27e7867b6508893da5f52a0f10944b59fd03aa58bd8c568f4e6aef16",
+      "bytes": 9903,
+      "historical_sha256": "1b87aa3f27e7867b6508893da5f52a0f10944b59fd03aa58bd8c568f4e6aef16",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/models/glm5next/__init__.py",
+      "sha256": "03995a08d7e702abd8dd07e786d3149ecb3d28520268a51a8ce1ffdbd7ac9f00",
+      "bytes": 480,
+      "historical_sha256": "03995a08d7e702abd8dd07e786d3149ecb3d28520268a51a8ce1ffdbd7ac9f00",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/models/glm5next/common/attention.py",
+      "sha256": "e83364215dccc2871e47906a8a5286852bd6a922a6a322394ff8f27db80952e0",
+      "bytes": 23195,
+      "historical_sha256": "e83364215dccc2871e47906a8a5286852bd6a922a6a322394ff8f27db80952e0",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/models/glm5next/common/kda.py",
+      "sha256": "cc89b4a0b08860fad2f0558ad85a9082fda400188583fb55a62db64e61ec2d94",
+      "bytes": 33539,
+      "historical_sha256": "cc89b4a0b08860fad2f0558ad85a9082fda400188583fb55a62db64e61ec2d94",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/models/glm5next/common/model.py",
+      "sha256": "f337b984e25c8cb3d1546dbb4bf7ac8a5c057b19967adb0bb037c416b252b7bb",
+      "bytes": 58982,
+      "historical_sha256": "f337b984e25c8cb3d1546dbb4bf7ac8a5c057b19967adb0bb037c416b252b7bb",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/platforms/cuda.py",
+      "sha256": "23d4f8e360cda2deac45fccc541a7be2ea9643c7f3fdc94529be2881757f19be",
+      "bytes": 39500,
+      "historical_sha256": null,
+      "historical_match": null
+    },
+    {
+      "path": "vllm/vllm/v1/attention/backend.py",
+      "sha256": "981ec1fc4b84d085838d73c209bf058d732804f5112271e12c8e10fe648177ed",
+      "bytes": 42540,
+      "historical_sha256": null,
+      "historical_match": null
+    },
+    {
+      "path": "vllm/vllm/v1/attention/backends/flash_attn.py",
+      "sha256": "e6637cb5a66c4284a32a634532a9c71c236249aa7f3dfefb34544984fc75663a",
+      "bytes": 74043,
+      "historical_sha256": null,
+      "historical_match": null
+    },
+    {
+      "path": "vllm/vllm/v1/attention/selector.py",
+      "sha256": "30cd098367da4795e092035b7ba0287ba5acc4cc080f8275a6f048d7fa7c7028",
+      "bytes": 8901,
+      "historical_sha256": "30cd098367da4795e092035b7ba0287ba5acc4cc080f8275a6f048d7fa7c7028",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/v1/core/block_pool.py",
+      "sha256": "6d1e0d89b43e3b2ae396906b9c2f0551dbe192b60d05f8c1ca2d93a91bbbeea3",
+      "bytes": 36242,
+      "historical_sha256": "6d1e0d89b43e3b2ae396906b9c2f0551dbe192b60d05f8c1ca2d93a91bbbeea3",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/v1/core/kv_cache_coordinator.py",
+      "sha256": "efd7193391197c555ebc0c8f2b593a6c4cb5b7da2978cd57414c0b71170f5971",
+      "bytes": 43771,
+      "historical_sha256": "efd7193391197c555ebc0c8f2b593a6c4cb5b7da2978cd57414c0b71170f5971",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/v1/core/kv_cache_manager.py",
+      "sha256": "d08315437c6b07040d1b7e12d7bd7d6e966c976a286f05a9788098cfdd9754c7",
+      "bytes": 40009,
+      "historical_sha256": "d08315437c6b07040d1b7e12d7bd7d6e966c976a286f05a9788098cfdd9754c7",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/v1/core/kv_cache_utils.py",
+      "sha256": "683437f94f195b6ff0f9d40e22d593456b1bc381872ca051b94c2104748bb6d5",
+      "bytes": 45382,
+      "historical_sha256": null,
+      "historical_match": null
+    },
+    {
+      "path": "vllm/vllm/v1/core/sched/async_scheduler.py",
+      "sha256": "38d296e77e4d612e696241c67298eb1ca9b6a48b483cd33d35495bf31691032e",
+      "bytes": 3635,
+      "historical_sha256": null,
+      "historical_match": null
+    },
+    {
+      "path": "vllm/vllm/v1/core/sched/output.py",
+      "sha256": "2a3454c78ba1e7ffcb96cb2839cea900a662829d495ed3d411a731aaccc1ba00",
+      "bytes": 13226,
+      "historical_sha256": null,
+      "historical_match": null
+    },
+    {
+      "path": "vllm/vllm/v1/core/sched/scheduler.py",
+      "sha256": "d9a39870286c424cef2fc0730e24092ee3df67e848608e2278944846bab804ae",
+      "bytes": 161925,
+      "historical_sha256": "d9a39870286c424cef2fc0730e24092ee3df67e848608e2278944846bab804ae",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/v1/engine/core.py",
+      "sha256": "20e44418e3db7c12d6333a0a227eeeb606cb5bcd93bd9dc44326a1c480099611",
+      "bytes": 113738,
+      "historical_sha256": "20e44418e3db7c12d6333a0a227eeeb606cb5bcd93bd9dc44326a1c480099611",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/v1/engine/core_client.py",
+      "sha256": "386b528a69029507f80a2df4d6df2a4fa6ba2ba811501dc3449ceea58b5cd90a",
+      "bytes": 85131,
+      "historical_sha256": "386b528a69029507f80a2df4d6df2a4fa6ba2ba811501dc3449ceea58b5cd90a",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/v1/engine/llm_engine.py",
+      "sha256": "b3a9df98e2f0f1cd29fcbb7b079c292f680902a9b578d0d1002015a9a7d6cf15",
+      "bytes": 20867,
+      "historical_sha256": "b3a9df98e2f0f1cd29fcbb7b079c292f680902a9b578d0d1002015a9a7d6cf15",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/v1/executor/multiproc_executor.py",
+      "sha256": "948c15e09617b02e2d0746d9ee20b43168b083da71313d05f06b29a753f8570b",
+      "bytes": 45633,
+      "historical_sha256": "948c15e09617b02e2d0746d9ee20b43168b083da71313d05f06b29a753f8570b",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/v1/kv_cache_interface.py",
+      "sha256": "39ea5be3054f97238f81ba070ea661f1b5975a6268ced5f413d4a057ea449d4a",
+      "bytes": 62700,
+      "historical_sha256": "39ea5be3054f97238f81ba070ea661f1b5975a6268ced5f413d4a057ea449d4a",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/v1/metrics/stats.py",
+      "sha256": "f594c5ea0f9caebe54737528e0da0ffbbdc909d74cfd625e0e384afb324d9663",
+      "bytes": 24957,
+      "historical_sha256": "f594c5ea0f9caebe54737528e0da0ffbbdc909d74cfd625e0e384afb324d9663",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/v1/request.py",
+      "sha256": "dd7c30bf8b0894dc123a739c299c0133566f8cc075b081e45905f1c29506e69d",
+      "bytes": 16160,
+      "historical_sha256": null,
+      "historical_match": null
+    },
+    {
+      "path": "vllm/vllm/v1/worker/block_table.py",
+      "sha256": "4068aea7336627f809def92f45401659d7c7c592d4da5dace6a11c90e7850c4a",
+      "bytes": 16157,
+      "historical_sha256": null,
+      "historical_match": null
+    },
+    {
+      "path": "vllm/vllm/v1/worker/gpu/README.md",
+      "sha256": "d47fdf9c7a4cbace5cf79bcd5d65f9f91cb1dd4910891c18fdbe560ddd03f16c",
+      "bytes": 181,
+      "historical_sha256": null,
+      "historical_match": null
+    },
+    {
+      "path": "vllm/vllm/v1/worker/gpu/model_runner.py",
+      "sha256": "5240fe8d62d403e466a4aa07a28fb7af5c0f1e9b9c3bb08c4003185bde461f87",
+      "bytes": 108371,
+      "historical_sha256": "5240fe8d62d403e466a4aa07a28fb7af5c0f1e9b9c3bb08c4003185bde461f87",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/v1/worker/gpu_model_runner.py",
+      "sha256": "203555a358aedf8bb425d56ef4b28b03bc8f6fc3969a283859f94e755d5f2f49",
+      "bytes": 322178,
+      "historical_sha256": "203555a358aedf8bb425d56ef4b28b03bc8f6fc3969a283859f94e755d5f2f49",
+      "historical_match": true
+    },
+    {
+      "path": "vllm/vllm/v1/worker/gpu_worker.py",
+      "sha256": "e970aa29a738aa15cd963d9f9202ca6d3d504e98fd344959fd998e940472a5a0",
+      "bytes": 71073,
+      "historical_sha256": "e970aa29a738aa15cd963d9f9202ca6d3d504e98fd344959fd998e940472a5a0",
+      "historical_match": true
+    }
+  ],
+  "selected_file_set_sha256": "9180168f382eeafd16af3a92387dee06e57d7ab4d23f39fe8c9e7f68af24dda4"
+}

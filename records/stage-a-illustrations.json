@@ -1,0 +1,113 @@
+{
+  "date": "2026-10-13",
+  "tool": "built-in image_gen",
+  "scope": "教学示意；不得作为硬件实测",
+  "images": [
+    {
+      "key": "tensor-memory",
+      "path": "assets/figures/stage-a-tensor-memory-v1.png",
+      "original_prompt": "Use case: scientific-educational. Asset type: Chinese engineering textbook illustration for tensor layout and hardware memory. Wide clean ivory background, navy and teal accents, restrained textbook illustration. Two panels: left shows a 2 by 3 matrix with exactly six cells in row-major memory and a transposed view using the SAME underlying six storage cells, no copy; right shows a conceptual device memory hierarchy Register → SRAM/cache → HBM with decreasing proximity to compute, and a separate CPU memory block connected by interconnect. Labels only in simple English: 'Tensor view', 'Same storage', 'Register', 'SRAM / cache', 'HBM', 'CPU memory', 'Compute'. No numerical hardware specifications. Distinguish conceptual addresses from physical capacity. Use large legible text, arrows clear, no misleading arrows implying transpose always copies. This is a schematic, not a hardware measurement. Landscape image.",
+      "revision_notes": "初版核对通过",
+      "checks": [
+        "2×3与3×2视图准确",
+        "6个共同storage元素",
+        "无复制",
+        "存储层次为概念图，无设备参数"
+      ],
+      "checked": true,
+      "final_prompt": "Use case: scientific-educational. Asset type: Chinese engineering textbook illustration for tensor layout and hardware memory. Wide clean ivory background, navy and teal accents, restrained textbook illustration. Two panels: left shows a 2 by 3 matrix with exactly six cells in row-major memory and a transposed view using the SAME underlying six storage cells, no copy; right shows a conceptual device memory hierarchy Register → SRAM/cache → HBM with decreasing proximity to compute, and a separate CPU memory block connected by interconnect. Labels only in simple English: 'Tensor view', 'Same storage', 'Register', 'SRAM / cache', 'HBM', 'CPU memory', 'Compute'. No numerical hardware specifications. Distinguish conceptual addresses from physical capacity. Use large legible text, arrows clear, no misleading arrows implying transpose always copies. This is a schematic, not a hardware measurement. Landscape image.",
+      "sha256": "7b11dab7a7f2da5d48c5d0982ca658917673ba8758b5106b3fe86d17b1620b68"
+    },
+    {
+      "key": "measurement-boundaries",
+      "path": "assets/figures/stage-a-measurement-boundaries-v1.png",
+      "original_prompt": "Use case: scientific-educational. Asset type: textbook illustration for inference latency measurement. Ivory navy teal clean vector-like educational diagram, landscape. A client on left, engine queue in center, accelerator on right. Draw request flow client → queue → prefill compute → first output returns to client, followed by decode outputs. Underneath an abstract timeline has start, first output, later outputs, done with brackets 'TTFT', 'ITL', 'E2E'. No numerical values. Explicitly distinguish observation at client from device compute time; show small network and queue segments before compute. Labels English only: 'Client', 'Queue', 'Prefill', 'Decode', 'First output', 'TTFT', 'ITL', 'E2E'. No bar chart or fabricated measured results. Clean 2D explanatory illustration, large legible minimal text.",
+      "revision_notes": "修正首输出箭头为Prefill直接返回；GPU/NPU标签。",
+      "checks": [
+        "首输出来自Prefill",
+        "后续输出来自Decode",
+        "TTFT首事件/E2E完成/ITL相邻事件正确",
+        "无实测数字"
+      ],
+      "checked": true,
+      "final_prompt": "Use case: scientific-educational. Asset type: textbook illustration for inference latency measurement. Ivory navy teal clean vector-like educational diagram, landscape. A client on left, engine queue in center, accelerator on right. Draw request flow client → queue → prefill compute → first output returns to client, followed by decode outputs. Underneath an abstract timeline has start, first output, later outputs, done with brackets 'TTFT', 'ITL', 'E2E'. No numerical values. Explicitly distinguish observation at client from device compute time; show small network and queue segments before compute. Labels English only: 'Client', 'Queue', 'Prefill', 'Decode', 'First output', 'TTFT', 'ITL', 'E2E'. No bar chart or fabricated measured results. Clean 2D explanatory illustration, large legible minimal text.\nFinal correction requirements: the first-output return arrow must start at Prefill and point to Client, with later output arrows starting at Decode. Label the accelerator GPU / NPU. Keep TTFT ending at the first client-observed output, ITL spanning adjacent output observations, and E2E ending at completion. No numerical measurements.",
+      "sha256": "b5773b49f3db5fb1efbfef99fa2b54af4dd370881a7aa5f402df0f1ef4978482"
+    },
+    {
+      "key": "engine-ownership",
+      "path": "assets/figures/stage-a-engine-ownership-v1.png",
+      "original_prompt": "Use case: scientific-educational. Asset type: vLLM textbook conceptual process and state ownership illustration, landscape. Clean ivory textbook navy teal. Three separate vertical panels labeled 'Client', 'EngineCore', 'Worker'. Client owns tokenizer and user output; EngineCore owns scheduler and logical cache blocks; Worker owns model and physical device cache. Arrows Client → EngineCore labeled 'Request'; EngineCore → Worker labeled 'Schedule'; Worker → EngineCore labeled 'Result'; EngineCore → Client labeled 'Output'. Make request and returning output visually separate. Show Scheduler and Cache manager as two internal conceptual boxes in EngineCore. Show Model runner and Device cache in Worker. Do not suggest direct client step calls into EngineCore Python method or client ownership of physical device memory. English labels only, no code snippets, no version claims, no measured quantities.",
+      "revision_notes": "初版核对通过",
+      "checks": [
+        "Client→EngineCore Request",
+        "EngineCore→Worker Schedule",
+        "Result/Output分别返回",
+        "逻辑cache与物理cache拥有者分开"
+      ],
+      "checked": true,
+      "final_prompt": "Use case: scientific-educational. Asset type: vLLM textbook conceptual process and state ownership illustration, landscape. Clean ivory textbook navy teal. Three separate vertical panels labeled 'Client', 'EngineCore', 'Worker'. Client owns tokenizer and user output; EngineCore owns scheduler and logical cache blocks; Worker owns model and physical device cache. Arrows Client → EngineCore labeled 'Request'; EngineCore → Worker labeled 'Schedule'; Worker → EngineCore labeled 'Result'; EngineCore → Client labeled 'Output'. Make request and returning output visually separate. Show Scheduler and Cache manager as two internal conceptual boxes in EngineCore. Show Model runner and Device cache in Worker. Do not suggest direct client step calls into EngineCore Python method or client ownership of physical device memory. English labels only, no code snippets, no version claims, no measured quantities.",
+      "sha256": "6c05f8eaecfb9b59e8da661ee1f9a517fdbb53fa2568fef29c027065e0e4fdc0"
+    },
+    {
+      "key": "chunked-prefill",
+      "path": "assets/figures/stage-a-chunked-prefill-v1.png",
+      "original_prompt": "Use case: scientific-educational. Asset type: textbook intuition figure for chunked prefill and decode coexistence. Wide ivory navy teal vector-like teaching graphic. Two rows of conceptual execution batches, each row with three batch boxes left to right. Upper row labeled 'Whole prefill' shows a large prefill slab ahead of decode, making decode wait. Lower row labeled 'Chunked prefill' shows three prefill portions mixed with small decode strips in every batch. Teal for prefill, gold for decode, navy borders. Labels limited to 'Whole prefill', 'Chunked prefill', 'Prefill', 'Decode', 'Wait', 'Batch'. No timing numbers, no promise of speedup. Preserve interpretation: smaller chunks allow interleaving, while total prefill work still exists. This is conceptual ordering, not an exact vLLM scheduler trace.",
+      "revision_notes": "每批一个Prefill chunk与Decode区域表示共批；删除串行交替strip。",
+      "checks": [
+        "完整Prefill先于后续Decode",
+        "分块行恰有3个chunk",
+        "每批混合工作",
+        "无速度保证"
+      ],
+      "checked": true,
+      "final_prompt": "Use case: scientific-educational. Asset type: textbook intuition figure for chunked prefill and decode coexistence. Wide ivory navy teal vector-like teaching graphic. Two rows of conceptual execution batches, each row with three batch boxes left to right. Upper row labeled 'Whole prefill' shows a large prefill slab ahead of decode, making decode wait. Lower row labeled 'Chunked prefill' shows three prefill portions mixed with small decode strips in every batch. Teal for prefill, gold for decode, navy borders. Labels limited to 'Whole prefill', 'Chunked prefill', 'Prefill', 'Decode', 'Wait', 'Batch'. No timing numbers, no promise of speedup. Preserve interpretation: smaller chunks allow interleaving, while total prefill work still exists. This is conceptual ordering, not an exact vLLM scheduler trace.\nFinal correction requirements: the upper row shows one entire Prefill batch followed by waiting Decode work. The lower row shows exactly three batches, each containing one Prefill chunk and one Decode region together inside the same batch boundary. Do not draw alternating serial strips that imply serial execution of separate batches. Preserve total prefill work conceptually. No timing values or guaranteed speedup.",
+      "sha256": "ffe5e941117e88e8ec395181513901a328d75771ee173fe716a25af2ed75a197"
+    },
+    {
+      "key": "prefix-sharing",
+      "path": "assets/figures/stage-a-prefix-sharing-v1.png",
+      "original_prompt": "Use case: scientific-educational. Asset type: Chinese engineering textbook figure showing read-only full-block prefix sharing. Wide clean ivory navy teal. Two request paths labeled 'A' and 'B'. Each logical path points to the SAME two physical prefix blocks labeled 'Prefix 1' and 'Prefix 2'. Then A points to its own suffix block labeled 'Suffix A' and B to separate 'Suffix B'. Shared blocks shown only once in a central physical pool. The two suffix blocks are not shared. Simple small legend 'Shared prefix' and 'Private suffix'. English text only. Each of the two prefix blocks must have two incoming request arrows, each suffix exactly one. No mutation of shared full blocks, no copied prefix blocks. No invented performance or capacity values. Draw only this precise block relationship with spacious typography.",
+      "revision_notes": "两逻辑表分别引用同一P1/P2及各自后缀；物理块无出边。",
+      "checks": [
+        "A/B.P1指向同一Prefix1",
+        "A/B.P2指向同一Prefix2",
+        "SA/SB各私有",
+        "物理块无出边"
+      ],
+      "checked": true,
+      "final_prompt": "Use case: scientific-educational. Asset type: Chinese engineering textbook figure showing read-only full-block prefix sharing. Wide clean ivory navy teal. Two request paths labeled 'A' and 'B'. Each logical path points to the SAME two physical prefix blocks labeled 'Prefix 1' and 'Prefix 2'. Then A points to its own suffix block labeled 'Suffix A' and B to separate 'Suffix B'. Shared blocks shown only once in a central physical pool. The two suffix blocks are not shared. Simple small legend 'Shared prefix' and 'Private suffix'. English text only. Each of the two prefix blocks must have two incoming request arrows, each suffix exactly one. No mutation of shared full blocks, no copied prefix blocks. No invented performance or capacity values. Draw only this precise block relationship with spacious typography.\nFinal correction requirements: show two logical block tables, each with exactly three entries. A.P1 and B.P1 both point into the single physical Prefix 1 block; A.P2 and B.P2 both point into the single physical Prefix 2 block. A.S points to Suffix A only, and B.S points to Suffix B only. There are exactly six logical references and four physical blocks. Shared physical blocks have two incoming arrows each, private suffix blocks have one each. Physical blocks must have no outgoing arrows. No duplicated physical prefix copies.",
+      "sha256": "2e3ec3874c7fc423a342c1c74580ccf07685bd45582c2a07f4d993cac6de230c"
+    },
+    {
+      "key": "attention-io",
+      "path": "assets/figures/stage-a-attention-io-v1.png",
+      "original_prompt": "Use case: scientific-educational. Asset type: textbook figure contrasting attention score materialization and tiled attention IO. Landscape ivory navy teal clean textbook. Left panel 'Materialized scores' shows Q and K feeding a large grid labeled 'Scores in HBM', then softmax and V result. Right panel 'Tiled attention' shows small Q/K/V tiles moving between HBM and an on-chip block labeled 'Tile + online softmax', producing output without a full scores grid in HBM. Separately a tiny bottom strip labeled 'Paged KV' shows logical KV blocks mapping to physical blocks to emphasize a distinct cache organization concern. English labels only, no equations or numbers, no measured speedup claims. FlashAttention is IO reorganization of exact attention under its assumptions, not sparse attention. Keep large text and clear educational arrows.",
+      "revision_notes": "初版核对通过",
+      "checks": [
+        "Q/K形成scores，softmax后乘V",
+        "分块在线softmax无全量score矩阵",
+        "分页独立层次",
+        "无稀疏或速度承诺"
+      ],
+      "checked": true,
+      "final_prompt": "Use case: scientific-educational. Asset type: textbook figure contrasting attention score materialization and tiled attention IO. Landscape ivory navy teal clean textbook. Left panel 'Materialized scores' shows Q and K feeding a large grid labeled 'Scores in HBM', then softmax and V result. Right panel 'Tiled attention' shows small Q/K/V tiles moving between HBM and an on-chip block labeled 'Tile + online softmax', producing output without a full scores grid in HBM. Separately a tiny bottom strip labeled 'Paged KV' shows logical KV blocks mapping to physical blocks to emphasize a distinct cache organization concern. English labels only, no equations or numbers, no measured speedup claims. FlashAttention is IO reorganization of exact attention under its assumptions, not sparse attention. Keep large text and clear educational arrows.",
+      "sha256": "d5e4e3cfd9206482a2c0e1566b1b54fa76adce96821fdea8834299fdc4edf6aa"
+    },
+    {
+      "key": "tensor-parallel",
+      "path": "assets/figures/stage-a-tensor-parallel-v1.png",
+      "original_prompt": "Use case: scientific-educational. Asset type: engineering textbook illustration of tensor parallel paired column and row projections. Landscape ivory navy teal 2D pedagogical drawing. Two devices labeled 'Rank 0' and 'Rank 1'. Start with one replicated input 'X'. First linear projection is split by output channels, yielding two separate output shards, one on each rank; local activation; second projection split by input channels yields partial results on each rank; an 'AllReduce sum' combines partial results and shows the same complete 'Y' on both ranks. Labels limited to 'X', 'Column parallel', 'Local activation', 'Row parallel', 'Partial result', 'AllReduce sum', 'Y', 'Rank 0', 'Rank 1'. Arrows must go through both ranks to collective then replicated outputs. No claim that every layer uses exactly this communication path or universal KV division. Add no hardware specs or speedup numbers.",
+      "revision_notes": "初版核对通过",
+      "checks": [
+        "输入复制",
+        "column产生输出分片",
+        "row产生partial同shape",
+        "AllReduce合并为复制Y"
+      ],
+      "checked": true,
+      "final_prompt": "Use case: scientific-educational. Asset type: engineering textbook illustration of tensor parallel paired column and row projections. Landscape ivory navy teal 2D pedagogical drawing. Two devices labeled 'Rank 0' and 'Rank 1'. Start with one replicated input 'X'. First linear projection is split by output channels, yielding two separate output shards, one on each rank; local activation; second projection split by input channels yields partial results on each rank; an 'AllReduce sum' combines partial results and shows the same complete 'Y' on both ranks. Labels limited to 'X', 'Column parallel', 'Local activation', 'Row parallel', 'Partial result', 'AllReduce sum', 'Y', 'Rank 0', 'Rank 1'. Arrows must go through both ranks to collective then replicated outputs. No claim that every layer uses exactly this communication path or universal KV division. Add no hardware specs or speedup numbers.",
+      "sha256": "5c360e9c65b87a96aa4359a9aa8cded62c199e326c6b76bd7e0b73e9d61381ea"
+    }
+  ],
+  "prompt_record_note": "original_prompt 为完整首次提示词；final_prompt 为合并初始要求与核对修订的完整可复用技术提示，不是工具调用日志的逐字转录。"
+}

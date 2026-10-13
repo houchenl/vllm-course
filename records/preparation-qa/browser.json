@@ -1,0 +1,516 @@
+{
+  "pages": [
+    {
+      "file": "index.html",
+      "desktop": {
+        "title": "课程入口与课表 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "source-map.html",
+      "desktop": {
+        "title": "教学源码地图 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "rules.html",
+      "desktop": {
+        "title": "已确认课程规则 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "editorial-guide.html",
+      "desktop": {
+        "title": "HTML 教材讲义编写规范 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "records/progress.html",
+      "desktop": {
+        "title": "学习进度与环境事实 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "lessons/01-inference-lifecycle.html",
+      "desktop": {
+        "title": "第 01 课 · 一次生成请求如何运行 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 3,
+        "math": 5
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "lessons/02-tensor-layout.html",
+      "desktop": {
+        "title": "第 02 课 · 张量布局与异步执行：计算为何发生复制或等待 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 2,
+        "math": 3
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "lessons/03-hardware-roofline.html",
+      "desktop": {
+        "title": "第 03 课 · 算力、带宽与容量：用 Roofline 提出瓶颈假设 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 2,
+        "math": 3
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "lessons/04-online-measurement.html",
+      "desktop": {
+        "title": "第 04 课 · 在线测量：负载、时间边界与公平比较 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 2,
+        "math": 2
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "lessons/05-process-ownership.html",
+      "desktop": {
+        "title": "第 05 课 · 进程与状态归属：请求怎样跨越客户端、引擎和 Worker · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 2,
+        "math": 1
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "lessons/06-scheduler-trace.html",
+      "desktop": {
+        "title": "第 06 课 · 调度器的 token 账本：预算、抢占与恢复 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 2
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "lessons/07-paged-kv.html",
+      "desktop": {
+        "title": "第 07 课 · 分页 KV：块表、槽位与预分配池 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 2,
+        "math": 3
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "lessons/08-prefix-cache.html",
+      "desktop": {
+        "title": "第 08 课 · 前缀复用：哈希、引用计数与命中边界 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 2,
+        "math": 2
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "lessons/09-chunked-prefill.html",
+      "desktop": {
+        "title": "第 09 课 · Chunked Prefill 与异步调度：长短请求怎样共享执行 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 2,
+        "math": 2
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "lessons/10-runner-inputs.html",
+      "desktop": {
+        "title": "第 10 课 · ModelRunner：把执行计划变成张量与 Attention metadata · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 2,
+        "math": 1
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "lessons/11-attention-backends.html",
+      "desktop": {
+        "title": "第 11 课 · Attention 的三层问题：架构、IO与backend · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 2,
+        "math": 3
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "lessons/12-tensor-parallel.html",
+      "desktop": {
+        "title": "第 12 课 · 张量并行：线性层、heads与collective怎样协作 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 2,
+        "math": 4
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "lessons/13-tp-scaling.html",
+      "desktop": {
+        "title": "第 13 课 · 单机扩展：拓扑、batch与通信为何改变收益 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 2,
+        "math": 2
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "lessons/14-stage-a-checkpoint.html",
+      "desktop": {
+        "title": "第 14 课 · 阶段 A 验收：解释一条请求，诊断一个真实限制 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 2,
+        "math": 1
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "records/lesson01-report-template.html",
+      "desktop": {
+        "title": "第一课报告模板 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "records/lesson02-report-template.html",
+      "desktop": {
+        "title": "第 02 课报告模板 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "records/lesson03-report-template.html",
+      "desktop": {
+        "title": "第 03 课报告模板 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "records/lesson04-report-template.html",
+      "desktop": {
+        "title": "第 04 课报告模板 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "records/lesson05-report-template.html",
+      "desktop": {
+        "title": "第 05 课报告模板 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "records/lesson06-report-template.html",
+      "desktop": {
+        "title": "第 06 课报告模板 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "records/lesson07-report-template.html",
+      "desktop": {
+        "title": "第 07 课报告模板 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "records/lesson08-report-template.html",
+      "desktop": {
+        "title": "第 08 课报告模板 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "records/lesson09-report-template.html",
+      "desktop": {
+        "title": "第 09 课报告模板 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "records/lesson10-report-template.html",
+      "desktop": {
+        "title": "第 10 课报告模板 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "records/lesson11-report-template.html",
+      "desktop": {
+        "title": "第 11 课报告模板 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "records/lesson12-report-template.html",
+      "desktop": {
+        "title": "第 12 课报告模板 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "records/lesson13-report-template.html",
+      "desktop": {
+        "title": "第 13 课报告模板 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "records/lesson14-report-template.html",
+      "desktop": {
+        "title": "第 14 课报告模板 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    },
+    {
+      "file": "templates/lesson-template.html",
+      "desktop": {
+        "title": "新课编写模板 · vLLM 与 AI Infra",
+        "width": 1440,
+        "scrollWidth": 1440,
+        "images": 0,
+        "math": 0
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390
+      }
+    }
+  ],
+  "interaction": [
+    {
+      "syllabusWeeks": 58,
+      "readyLessons": 14
+    },
+    {
+      "kind": "roofline",
+      "initial": "I=31.50769 FLOP/byte；计算下界 10.73742 μs；访存下界 34.07872 μs；双下界 34.07872 μs。",
+      "invalid": "请输入范围内的有限数值；数量必须为整数。",
+      "changed": "I=63.01538 FLOP/byte；计算下界 21.47484 μs；访存下界 34.07872 μs；双下界 34.07872 μs。"
+    },
+    {
+      "kind": "budget",
+      "initial": "本轮计划 A=2、B=1、C=1；剩余 0。只演示固定顺序分配。",
+      "invalid": "请输入范围内的有限数值；数量必须为整数。",
+      "changed": "本轮计划 A=2、B=0、C=0；剩余 0。只演示固定顺序分配。"
+    },
+    {
+      "kind": "pages",
+      "initial": "6 块、24 槽；逻辑 15 KiB、取整 24 KiB、尾块 9 KiB。",
+      "invalid": "请输入范围内的有限数值；数量必须为整数。",
+      "changed": "9 块、36 槽；逻辑 27 KiB、取整 36 KiB、尾块 9 KiB。"
+    },
+    {
+      "kind": "collective",
+      "initial": "payload=64 KiB；理想 ring 每 rank 流量≈64 KiB。",
+      "invalid": "请输入范围内的有限数值；数量必须为整数。",
+      "changed": "payload=64 KiB；理想 ring 每 rank 流量≈96 KiB。"
+    },
+    {
+      "imageZoom": true,
+      "printAnswerRestoration": true,
+      "printPdf": "lesson14-print.pdf"
+    }
+  ],
+  "errors": []
+}

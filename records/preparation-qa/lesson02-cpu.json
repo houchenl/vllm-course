@@ -1,0 +1,91 @@
+{
+  "device": "cpu",
+  "torch": "2.14.1",
+  "dtype": "torch.float32",
+  "cuda_runtime": null,
+  "x": {
+    "shape": [
+      2,
+      3
+    ],
+    "stride": [
+      3,
+      1
+    ],
+    "storage_offset": 0,
+    "logical_bytes": 24,
+    "storage_bytes": 24,
+    "contiguous": true
+  },
+  "transpose": {
+    "shape": [
+      3,
+      2
+    ],
+    "stride": [
+      1,
+      3
+    ],
+    "storage_offset": 0,
+    "logical_bytes": 24,
+    "storage_bytes": 24,
+    "contiguous": false
+  },
+  "contiguous_copy": {
+    "shape": [
+      3,
+      2
+    ],
+    "stride": [
+      2,
+      1
+    ],
+    "storage_offset": 0,
+    "logical_bytes": 24,
+    "storage_bytes": 24,
+    "contiguous": true
+  },
+  "transpose_shares_storage": true,
+  "contiguous_allocates": true,
+  "matmul_shape": [
+    512,
+    512,
+    512
+  ],
+  "operations_per_repeat": 20,
+  "warmup_operations": 5,
+  "measurements": [
+    {
+      "submission_wall_seconds": 0.0033238744363188744,
+      "synchronized_wall_seconds": 0.0033245403319597244,
+      "device_event_ms": null
+    },
+    {
+      "submission_wall_seconds": 0.003132833167910576,
+      "synchronized_wall_seconds": 0.0031333332881331444,
+      "device_event_ms": null
+    },
+    {
+      "submission_wall_seconds": 0.0031602084636688232,
+      "synchronized_wall_seconds": 0.003161541186273098,
+      "device_event_ms": null
+    },
+    {
+      "submission_wall_seconds": 0.0031939996406435966,
+      "synchronized_wall_seconds": 0.0031943339854478836,
+      "device_event_ms": null
+    },
+    {
+      "submission_wall_seconds": 0.003282291814684868,
+      "synchronized_wall_seconds": 0.0032826662063598633,
+      "device_event_ms": null
+    }
+  ],
+  "finite_output": true,
+  "timing_scope": "CPU perf_counter submission and synchronized completion; CUDA event on current stream only",
+  "not_measured": [
+    "vLLM performance",
+    "production TTFT",
+    "NPU event interval"
+  ]
+}
